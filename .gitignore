@@ -51,3 +51,6 @@ chromadb/
 _scan_secrets.py
 _redact_secrets.py
 
+
+# MemSearch plugin data
+.memsearch/
