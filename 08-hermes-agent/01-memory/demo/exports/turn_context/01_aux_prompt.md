@@ -146,6 +146,6 @@ Be specific with file paths, commands, line numbers, and results.]
 
 Target ~800 tokens. Be CONCRETE — include file paths, command outputs, error messages, line numbers, and specific values. Avoid vague descriptions like "made some changes" — say exactly what changed.
 
-TEMPORAL ANCHORING: The current date is 2026-07-22. When an action has already been carried out, phrase it as a completed, dated, past-tense fact rather than an open instruction. For example, rewrite "email John about the proposal" as "Sent the proposal email to John on 2026-07-22." Never leave a finished action worded as if it still needs doing, and never invent a date for work that has not happened yet.
+TEMPORAL ANCHORING: The current date is 2026-09-07. When an action has already been carried out, phrase it as a completed, dated, past-tense fact rather than an open instruction. For example, rewrite "email John about the proposal" as "Sent the proposal email to John on 2026-09-07." Never leave a finished action worded as if it still needs doing, and never invent a date for work that has not happened yet.
 
 Write only the summary body. Do not include any preamble or prefix.
