@@ -1,6 +1,6 @@
 # D1 — 总纲 + L4a 运行时内核（循环与 Harness）
 
-> **日期：2026-09-18（周五）** ｜ 起跑时间较晚（今天从 **13:30** 开始），按下方"下午起跑版"时间盒执行
+> **日期：2026-09-18（周五）** ｜ **实际 15:00 起跑**（14:52 开工），按下方"临晚起跑版"时间盒执行，**硬停 23:00**
 > **今日面试锚（A）**：① 讲清**六层栈**每一层（这是本期最重要的面试资产）② 讲"**一条用户消息在 agent 里的一生**"③ **手写/口述一次 ReAct 循环**
 > **覆盖层**：总纲（L1-L6 全览）+ **L4a 循环与 Harness 内核**
 > **主阅读（提纯版）**：`00-我的深度整合专题\循环工程深度解析\Loop_Engineering_Deep_Dive.md`（今日新建，含 📍溯源节）；
@@ -13,7 +13,7 @@
 | 路径 | 状态 | 行数/大小 | 备注 |
 |---|:--:|---|---|
 | `00-我的深度整合专题\Agent面试5日冲刺\README.md` | ✅ | 250+ | v2 六层栈版总纲 |
-| `00-我的深度整合专题\循环工程深度解析\Loop_Engineering_Deep_Dive.md` | ✅ 已就绪 | 567 | 三文蒸馏；若打开时还没生成，先读源文 01 |
+| `00-我的深度整合专题\循环工程深度解析\Loop_Engineering_Deep_Dive.md` | ✅ 已就绪 | 875 | 三文蒸馏；已重写为「总(全文地图)→分(三层)→查(附录)」结构 |
 | `09-loop-engineering\01.context-looop-engineering.md` | ✅ | 484 | ⚠️ 文件名拼写 **looop**（三个 o） |
 | `09-loop-engineering\02.loop-engineering.md` | ✅ | 445 | |
 | `09-loop-engineering\03.loop-engineering.md` | ✅ | 424 | |
@@ -34,24 +34,28 @@
 
 ---
 
-## ⏱ 时间盒（下午起跑版，≈7.5h 有效学习，含休息）
+## ⏱ 时间盒（临晚起跑版 · 按 15:00 实际开始重排，≈7h 有效学习）
+
+> 14:52 才开工 → 原"13:30 起跑版"作废，改用下表。**硬停 23:00**（睡前 30min 不塞新知识）。
+> 若今晚只能到 19:05，就走**核心三件套**（总纲 + 循环专题 + 写码挑战①），其余顺延到明早 07:30-09:00。
 
 | 时段 | 动作 | 具体内容 | 产出 |
 |---|---|---|---|
-| 13:30-14:00 | **启动·总纲** | 通读 `README.md` v2 的 §1 六层栈总图 + §3 五日总览；**手抄六层表**（层名 + 候选工具 + 本仓库实证目录） | 六层栈总纲表（骨架） |
-| 14:00-15:40 | **概念 M**（L4a） | `循环工程深度解析\Loop_Engineering_Deep_Dive.md` 全读；三文冲突节重点看；源文只在专题的 ↳ 标记处回读 | 四层演进（Prompt→Context→Harness→Loop）能口述 |
-| 15:40-16:30 | **对照 D** | `01-Agent\02-Agent_react\Readme.md` + `01-Agent\02-Agent_react\agent\loop.py`（55 行，**逐行读懂**）+ `01-Agent\02-Agent_react\agent\types.py` + `01-Agent\02-Agent_react\agent\tools\__init__.py` | 真实 loop 的结构笔记 |
-| 16:30-17:15 | **写码挑战①** | **闭卷**（见下） | 差异点笔记 |
-| 17:15-17:30 | 休息 | 离开电脑 | |
-| 17:30-19:00 | **机制 M**（L4a） | `06-harnes\learn-claude-code\s01_agent_loop\`（README + code.py）+ `06-harnes\learn-claude-code\s02_tool_use\`（README.md 222 行 + code.py 190 行） | 循环 + 工具分发机制笔记 |
-| 19:00-20:00 | 晚饭 | 硬休 | |
-| 20:00-21:15 | **范式收口**（L4a） | `01-Agent` 其余 README 快读：`00-llm_function_call`/`01-small-llm-function-call-project`、`02-Plan-and-Execute`、`03-Reﬂexion`、`04-LATS`、`05-Multi-Agent-Crew` | **五范式对比表**成稿 |
-| 21:15-22:15 | **整合 A** | 补全六层栈总纲表（先填 **L4 行**：LangGraph ⊻ Hermes 二选一）+ 画**生命周期总图 v1** + 面试卡 7 问自答 + 录 3 问口述 | 本文件"今日产出区" |
-| 顺延 D2 晨 30min | 补读 | `s03_permission` + `s10_system_prompt` 快读（权限四决策 + 组装原则） | 并入 D2 卡片 |
+| 15:00-15:30 | **启动·总纲** | 冲刺 `README.md` §1 六层栈总图 + §3 五日总览；**手抄六层表** | 六层栈总纲表（骨架）|
+| 15:30-17:15 | **概念 M**（L4a）| `循环工程深度解析\Loop_Engineering_Deep_Dive.md`（875 行）全读；**先看 🔗 全文地图**（Loop 是什么 + 三篇在干嘛 + 术语人话表），再看"冲突与判断" | 四层演进能口述 |
+| 17:15-18:05 | **对照 D** | `01-Agent\02-Agent_react\Readme.md` + `agent\loop.py`（55 行逐行）+ `agent\types.py` + `agent\tools\__init__.py` | 真实 loop 结构笔记 |
+| 18:05-18:20 | 休息 | 离开电脑 | |
+| 18:20-19:05 | ⚔️ **写码挑战①** | 闭卷 45min（见下） | 差异点笔记 |
+| 19:05-20:00 | 晚饭 | 硬休 | |
+| 20:00-21:15 | **机制 M**（L4a）| `06-harnes\learn-claude-code\s01_agent_loop\`（README 207 + code.py 137）+ `06-harnes\learn-claude-code\s02_tool_use\`（README 222 + code.py 190）| 循环 + 工具分发笔记 |
+| 21:15-21:30 | 休息 | | |
+| 21:30-22:20 | **范式收口** | `01-Agent` 其余 README 快读：`00-llm_function_call` / `01-small-llm-function-call-project` / `02-Plan-and-Execute` / `03-Reﬂexion` / `04-LATS` / `05-Multi-Agent-Crew` | **五范式对比表**成稿 |
+| 22:20-23:00 | **整合 A** | 补全六层栈总纲表（先填 **L4 行**）+ 画**生命周期总图 v1** + 面试卡 7 问自答 + 录 3 问口述 | 本文件"今日产出区" |
+| 顺延 D2 晨 30min | 补读 | `s03_permission` + `s10_system_prompt` 快读 | 并入 D2 卡片 |
 
 ---
 
-## ⚔️ 写码挑战①（16:30-17:15，45min，闭卷）
+## ⚔️ 写码挑战①（18:20-19:05，45min，闭卷）
 
 读完 `01-Agent\02-Agent_react\agent\loop.py` 后**合上电脑**，用 Python 伪代码重写最小 ReAct 循环（10-20 行），必须覆盖 7 件事：
 
