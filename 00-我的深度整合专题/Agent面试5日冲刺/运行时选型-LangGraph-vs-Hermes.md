@@ -1,5 +1,22 @@
 # 运行时选型对照卡 · LangGraph vs Hermes（D4 专题）
 
+> **诚实标注**：本篇是「入口对照卡」（约 312 行），**不是完整专题**——按《专题创作指南》必达标准（1500–3000 行三层结构 + 每层面试卡 + ≥10 条避坑 + 至少一个统一类比），可在面试后扩写成完整版。指南中**未找到显式 "转正规则" 条款**，故此处凭"完整性差距"诚实标注。
+
+## 目录
+
+- [0. 前言：为什么这一层最容易选错](#0-前言为什么这一层最容易选错)
+- [1. 它们在哪一层、什么关系](#1-它们在哪一层什么关系)
+- [2. Hermes 到底是什么](#2-hermes-到底是什么你最不懂的部分)
+- [3. 语言门槛：他会不会被迫学 Rust / C++](#3-语言门槛他会不会被迫学-rust--c)
+- [4. LangGraph 侧的仓库实证](#4-langgraph-侧的仓库实证)
+- [5. 选型建议](#5-选型建议)
+- [6. D4 晚间 90 / 60 分钟入门路径](#6-d4-晚间-90--60-分钟入门路径仅本仓库内文件)
+- [7. 零基础可跑性诚实评估](#7-零基础可跑性诚实评估)
+- [8. 五分钟速查卡](#8-五分钟速查卡)
+- [9. 面试问答卡](#9-面试问答卡-6-问含诚实答法)
+- [附录 A · 中英对照术语表](#附录-a--中英对照术语表)
+- [附录 B · 引用过的仓库文件](#附录-b--引用过的仓库文件仓库根相对全路径)
+
 ## 📍 本页定位
 
 - 服务于 D4「L4 运行时选型」，承接 D2（记忆）、D3（RAG）已沉淀的"主循环 + Context"心智模型；为 D5 收尾（项目故事 + 选型题答法）准备弹药。
@@ -8,7 +25,87 @@
 
 ---
 
+## 0. 前言：为什么这一层最容易选错
+
+### 0.1 痛点开场（真实困惑）
+
+「我熟 LangGraph，但不懂 Hermes；而且我只会 Python，不会 C++ / Rust。」——这是面试前一周最常见的迷惑：左手是熟练的图编排库，右手是听上去像黑科技的"完整 agent"，招聘 JD 又总爱把 LangChain / LangGraph 写进关键词。结果出现三种典型错觉：①"LangGraph 是入门，Hermes 是高级" → 错；②"Hermes 是基于 LangGraph 的二次封装" → 错（`08-hermes-agent/09-lang-serial-not/README.md:128-148` 实证 `pyproject.toml` 零命中）；③"Hermes 必然要求 Rust/C++" → 错（仓库内材料 + 教学 demo 全部 Python）。
+
+### 0.2 对比表：选错的代价 vs 选对的收益
+
+| 维度 | 选错（叠两套循环 / 凭语感选型） | 选对（同层二选一 + 能力挂载） |
+|------|--------------------------------|--------------------------------|
+| 编排骨架 | LangGraph StateGraph + 自己再写 while 控 Hermes 循环 → 双心跳、状态分裂 | 一套编排骨架 + 另一条的能力以 tool / middleware 形式挂上去 |
+| Prompt Cache | 中途改 SP / 换 toolset → 缓存击穿、token 成本翻倍（`01-arch.md:167, 240-242`） | 稳定前缀冻结在 Session 启动；可变部分放消息侧或 tool result |
+| 学习曲线 | 同时啃两套抽象 + 状态机迁移问题 | 主线一个、另一条作为参考路径背对照表 |
+| 面试表达 | "我都用过"但讲不清取舍 | "我选 A 因为 X；我知道 B 是同层另一条" → 显得做过决策 |
+
+### 0.3 失败模式 ASCII 图
+
+```text
+   失败模式 1：叠两套循环
+   ─────────────────────────────
+   LangGraph StateGraph (chat_node → tools_condition → ToolNode)
+            └── 用户消息 ── 同时 ── Hermes 自研 while loop (run_conversation)
+   结果：两条心跳各自 append messages、状态分裂、cache 反复击穿
+
+   失败模式 2：照抄 demo 架构
+   ─────────────────────────────
+   Hermes demo run_agent_loop.py  → 100% 复刻到生产
+            └── 缺：Session 冻结 SP、Memory Update、Cron、Gateway
+   结果：能跑一周，生产环境崩在第 3 天
+
+   失败模式 3：因为语言恐惧放弃 Hermes
+   ─────────────────────────────
+   "Hermes 一定用了 Rust"（仓库外传闻）
+            └── 实际：仓库内 Hermes 全 Python；Rust/C++ 是 Qdrant/llama.cpp/TGI/Firecracker
+   结果：白丢一条更轻量的对照路径
+```
+
+---
+
+## 0.5 阅读导引：符号表 · 双模式阅读 · 学习路径
+
+### 符号表
+
+| 符号/术语 | 含义 | 本仓库出处 |
+|---|---|---|
+| **runtime（运行时）** | 拥有"循环 + 状态 + 工具 + 停机 + 人审"这五件的能力层 | 本文语境 = 六层栈 **L4** |
+| **harness** | 装这些件的"盒子"：系统提示词组装、工具注册、权限、沙箱、日志 | 与 loop 的关系 = "盒子 vs 盒子里那根线" |
+| **loop** | 一次 turn 内"调模型 → 看是否要工具 → 执行 → 回灌"的反复 | `08-hermes-agent\02-run-agent\hermes_src\agent\conversation_loop.py`（5355 行） |
+| **turn / session** | turn = 一问一答（内含若干 loop 迭代）；session = 跨 turn 的长生命周期 | `08-hermes-agent\01-arch.md`；SP 在 session 启动时冻结 |
+| **checkpointer / thread_id** | LangGraph 的状态持久化与线程标识 | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py`（10 行） |
+| **interrupt / HITL** | 图内中断 + 人审放行 | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend\hitl.py`（183 行） |
+| **iteration budget / grace call** | 迭代预算，以及"超预算后允许的最后一次调用" | `08-hermes-agent\02-run-agent\hermes_src\agent\iteration_budget.py`（62 行） |
+| **handoff** | 子 Agent 之间移交控制权 | TripMate 的 flight → hotel → itinerary → final |
+| **toolset / registry** | 工具集合与注册表（循环只消费 schema） | `08-hermes-agent\hermes-study\tools\registry.py`（801 行） |
+| **skill** | 让 Agent 自己执行流程的"提示词包"（≠ tool） | `14-deepseek-harness\01.arch.md` 的 Tool vs Skill 对照 |
+
+### 双模式阅读
+
+- **快速模式（面试前 3 天，20 分钟）**：只读 §1.1 结论、§5.1 对照表、§7.1 避坑清单、§8 五分钟速查卡、§9 面试问答卡。
+  目标：**每层能答一句话 + 能说出"为什么不选另一个"**。
+- **深入模式（真要把源码读懂，3–4 小时）**：按 §6.1 的 90 分钟档读仓库材料 → 再逐行读 §4.2 的 `graph.py` → 最后对照 `conversation_loop.py` 的主循环段。
+  目标：**能指着文件说清"循环在哪、状态存哪、人审怎么接"**。
+
+### 学习路径
+
+```mermaid
+graph TD
+  A["§1 同层二选一 + 统一类比"] --> B["§2 Hermes 是什么 / 材料地图"]
+  B --> C["§3 语言门槛：不用 Rust/C++"]
+  C --> D["§4 LangGraph 侧实证：graph.py + threads.py"]
+  D --> E["§5 选型对照表 + 一句话推荐"]
+  E --> F["§6 90 / 60 分钟入门路径"]
+  F --> G["§7 避坑 12 条 + 可跑性诚实评估"]
+  G --> H["§8 速查卡 · §9 面试问答卡"]
+```
+
+---
+
 ## 1. 它们在哪一层、什么关系
+
+> **统一类比（贯穿全文）**：LangGraph 与 Hermes 是**同一层的两台发动机**——LangGraph 是**给你零件**的发动机厂（图编排库，你装 State / Node / Edge，它帮你跑）；Hermes 是**整车**（成品 harness，循环 + SP 组装 + Tools + Skills + Memory + Gateway + Cron + Eval 全部预装）。你可以**只用零件**自己装（LangGraph），也可以**直接开走**整车（Hermes），但**不要在车上再加一台发动机**——那是叠两套循环的下场（§0.3 失败模式 1）。下文每个对照（控制流 / 持久化 / HITL / 记忆 / 语言）都回到这个类比。
 
 ### 1.1 同层二选一（结论）
 
@@ -42,6 +139,39 @@ LangGraph 与 Hermes **都在"运行时/编排层"，解决同一类问题**：�
 ```
 
 > 备注：两条路径可以**叠加用 LangChain 的积木**（retriever、prompt template），但**编排骨架只能选一个**——这是同层的硬约束。
+
+---
+
+### 1.4 因果链：选型的依赖顺序（谁是谁的前提）
+
+```
+业务形态：终端里干活的编码 Agent？ vs 业务流程里的可恢复工作流？
+   │  ① 决定"要不要可恢复 / 可打断"
+   ▼
+是否需要 持久化 + 可恢复 + 人审（HITL）
+   │  ② 决定"骨架选谁"
+   ├─ 要 → LangGraph 主场（checkpointer / interrupt / time travel 现成）
+   └─ 不要 → Hermes 这类成品 harness 更省事（循环 / 工具 / 记忆 / 网关全预装）
+            │  ③ 决定"状态放哪"
+            ▼
+        状态放哪：SQLite transcript？checkpointer？Markdown 三件套？
+            │  ④ 决定"人审怎么接"
+            ▼
+        人审怎么接：图内 interrupt？审批队列 + 工具白名单？
+```
+
+> 面试用法：**先问业务形态，再谈框架品牌**。直接答"我用 LangGraph"会被追问"为什么不用成品 harness"；按这条链答，主动权在你。
+
+### 1.5 选型决策树（30 秒版）
+
+```
+任务里有"人必须点确认"的动作吗？
+  ├─ 有 ──→ LangGraph（interrupt + checkpointer 一条链解决）
+  └─ 没有
+       ├─ 要在既有业务流程里做分支 / 审批 / 可恢复 ──→ LangGraph
+       └─ 就是让 Agent 在终端 / 文件系统里把活干完 ──→ Hermes（成品 harness）
+             └─ 你只想看最小实现、打算自己写 ──→ 参考 waku（Python，95 行主循环）
+```
 
 ---
 
@@ -226,6 +356,23 @@ def get_all_threads() -> list:
 | 读 LangGraph 4.1 graph.py | `11-langgraph/02-Agentic-Chatbot-using-LangGraph/backend/graph.py` | 📖 只读，80 行 | 你已有的知识迁移（见 §4.2） |
 | 读 LangGraph threads.py | 同上 `backend/threads.py` | 📖 只读，10 行 | "侧边栏会话列表怎么来"的最短实现 |
 
+### 7.1 避坑清单（≥10 条）
+
+| # | ❌ 坑 | 表现 | 原因 | 解决 |
+|---|--------|------|------|------|
+| 1 | **叠两套循环** | LangGraph StateGraph 与自研 while 同时 append messages、状态分裂 | 以为"两套能互补"——实际两条心跳抢同一份 transcript | 同层二选一做编排骨架；另一条的能力以 tool / middleware 形式挂上去 |
+| 2 | **中途改 System Prompt** | prompt cache 反复击穿、token 成本翻倍 | 没看清 SP 是 Session 启动时冻结的快照（`01-arch.md:167, 240-242`） | 稳定前缀冻结在 Session 启动；可变部分放消息侧或 tool result |
+| 3 | **凭语感说"Hermes 是基于 LC 的二次封装"** | 面试当场被反问挂掉 | 仓库 `pyproject.toml` 零命中 LC/LG（`09-lang-serial-not/README.md:128-148`） | 答"自研路径，依赖 `openai SDK`，与 LC/LG 同层不同路" |
+| 4 | **以为 Hermes 一定涉及 Rust/C++** | 看到 Firecracker / Qdrant 字眼就劝退 | 混淆了"Harness 用了 X 的服务"与"Harness 用 X 写的" | Rust/C++ 组件都当服务/二进制调（HTTP / CLI），无需改源码 |
+| 5 | **照抄 demo 100% 复刻到生产** | demo 跑通 1 周 → 生产第 3 天崩 | demo 只跑 while + 部分 tools；缺 Session 冻结 SP / Memory Update / Cron / Gateway | 至少补：Session 启动冻结、transcript 落盘、可观测、错误退出码 |
+| 6 | **memory 改了当内存** | 改完 `user.md` 等几分钟没生效 | Session 启动时已冻结 SP，中途写盘**不**刷新当前 SP（`01-arch.md:530-542`） | 写盘 ≠ 生效；要新 Session 才进 SP，或显式 rebuild |
+| 7 | **用 LangGraph 写 SOP 串工具** | 自己糊一个 `add_edge(START → tool1 → tool2 → END)` 当工作流 | LangGraph 是循环 Agent 框架，**不是**任务编排 DAG 库（那是 Temporal / Airflow 的活） | 多步线性 SOP 用 Temporal / Airflow；只有"模型可能反复调工具"才用 LangGraph |
+| 8 | **面试把 LangChain 当成必选框架** | 一问"你不用 LC 怎么做 Agent"就卡住 | 误以为"严肃 Agent 必然依赖 LC" | 背对照表（§8）；答"Hermes 证明严肃产品可零依赖 LC/LG；我两条路都能讲取舍" |
+| 9 | **写"用过 Hermes"但讲不出 SOUL/user/memory 三件套** | 面试官追问 Session 冻结 vs Turn 组装就露馅 | 仓库材料没真读完 | D4 必读 `08-hermes-agent/01-arch.md:120-250` + `09-lang-serial-not/README.md:289-336` |
+| 10 | **把"Pi 是 TypeScript"当成"学 Hermes 必须学 TS"** | 看到 Pi 仓库是 TS 就放弃整条 Hermes 路径 | 混淆了"参考实现用什么写"和"你用什么写" | Pi 走 RPC（stdin/stdout JSONL）即可被 Python 调用（`13-pi-agent/01-arch.md:1016-1018`） |
+| 11 | **照搬 `pyproject.toml` 默认依赖到生产** | 引入一堆没用的 optional（`vector-stores-chroma` 等） | 没分清"runtime 必需"和"可选 skill 示例"（`09-lang-serial-not/README.md:128-135` 只 pin 必需） | 按 `09-lang-serial-not/README.md:150-159` 列依赖；可选 skill 走 extras |
+| 12 | **读完 1039 行 `13-pi-agent/01-arch.md` 才发现不是入门档** | D4 晚间花 2h 啃一半、走偏 | Pi 是进阶档，session 树 / jiti / compaction 都是 Hermes 没的细节 | 按 §6 时间盒：90/60 分钟档内**不读** Pi；面试官追问再升档 |
+
 > **诚实免责**：`13-pi-agent/` 与 `14-deepseek-harness/` 在本仓库内**只有文档**（无源码），跑法未验证；`08/12` 系 demo 大概率可跑（README 指令明确），但本人**未在 D4 时段实测**，写"能跑"前请先按 README 跑一遍 `python run_agent_loop.py` / `uv run waku`。
 
 ---
@@ -290,7 +437,34 @@ def get_all_threads() -> list:
 
 ---
 
-## 附：本文引用过的仓库文件（绝对路径）
+## 附录 A · 中英对照术语表
+
+| EN | 中文 | 一句话解释 | 出处 |
+|----|------|------------|------|
+| **agent loop / agentic loop** | 智能体主循环 | 用户消息→拼上下文→调模型→看是否调工具→执行→回灌→终止 的 while | `08-hermes-agent/01-arch.md:86-117`；`02-run-agent/README.md:60-103` |
+| **harness** | 装/驾驭件 | 跑 Agent 所需的全部运行时（loop + 模型适配 + 工具注册 + SP 组装 + Session），"模型是租的，harness 才是自己的" | `14-deepseek-harness/01.arch.md:103-128` |
+| **orchestration / orchestration layer** | 编排层 | 决定"消息进来后下一步走到哪"的层；LangGraph/Hermes/Autogen 都属此层 | 本卡 §1.1；`09-lang-serial-not/README.md:54-122` |
+| **checkpointer** | 检查点 / 持久化器 | 按 `thread_id` 把图的 state 持久化到存储（SQLite/PG），支持中断恢复 | `11-langgraph/02-Agentic-Chatbot-using-LangGraph/backend/graph.py:70-80`；`backend/threads.py:1-10` |
+| **interrupt / human-in-the-loop (HITL)** | 中断 / 人机协同 | 图/Loop 在某节点停下来等人审批，再 `Command(resume=...)` 继续 | `11-langgraph/02-Agentic-Chatbot-using-LangGraph/README.md:220-228` |
+| **handoff** | 移交 | 一个 agent 把对话/任务交还给另一个 agent 或上层 | `13-pi-agent/00-learn-guide.md:48-62`；Hermes `delegate_task` |
+| **tool registry / tool schema** | 工具注册表 / 工具 schema | 把函数注册成 LLM 可调用的工具；schema 每轮 API 全量下发 | `08-hermes-agent/02-run-agent/README.md:198-206`；`02-run-agent/notes/2_tools_discovery.md` |
+| **skill / SKILL.md** | 技能（Markdown 描述） | 文件化能力包；系统提示只挂 description，模型按需 `read` 全文 | `13-pi-agent/01-arch.md:897-936`；`12-hermes-agent-small/skills/` |
+| **sandbox / MicroVM** | 沙箱 / 轻量虚拟机 | 隔离 Agent 执行代码的环境（Docker → Firecracker → gVisor） | `08-hermes-agent/03-hermes Agent  学习大纲.md:280-299`；`05-env/` |
+| **prompt caching** | 提示前缀缓存 | 同一段 system prompt 在 provider 侧缓存，省钱；中途改 SP 会击穿 | `08-hermes-agent/01-arch.md:167, 240-242` |
+| **session / turn** | 会话 / 轮 | Session=启动冻结 SP 的容器；Turn=1 条用户消息跑完一次 Loop | `08-hermes-agent/01-arch.md:120-249`；`§6.4` |
+| **MemoryProvider** | 记忆提供者 | 抽象外部记忆（mem0/Honcho/SuperMemory）接线：`sync_turn / prefetch / shutdown` | `08-hermes-agent/07-mem-provider/`；`03-hermes Agent  学习大纲.md:74-93` |
+| **compaction / context compression** | 上下文压缩 | 当消息历史压到阈值（默认 50%），旧消息 → 结构化 Summary | `08-hermes-agent/01-arch.md:629-656`；`13-pi-agent/01-arch.md:820-883` |
+| **gateway** | 消息网关 | 把 Telegram/Slack/Email 等入站消息转成同一 Agent Turn 的常驻进程 | `08-hermes-agent/01-arch.md:14-83`；`08-gateway/` |
+| **tool call / function calling** | 工具调用 | 模型返回的不是纯文本而是结构化的 `tool_calls`，由 runtime 执行 | `08-hermes-agent/02-run-agent/README.md:60-103` |
+| **StateGraph / Node / Edge** | 状态图 / 节点 / 边 | LangGraph 三件套：状态 = `TypedDict + add_messages`，节点 = 一步，边 = 顺序或条件跳转 | `11-langgraph/02-Agentic-Chatbot-using-LangGraph/backend/graph.py:21-78` |
+| **System Prompt (SP)** | 系统提示 | 写在消息数组最前的长上下文；稳定部分缓存，可变部分走消息侧 | `08-hermes-agent/01-arch.md:142-178` |
+| **iteration budget / max iterations** | 迭代预算 / 最大轮数 | while 循环的刹车（防死循环/防失控） | `08-hermes-agent/02-run-agent/README.md:208-215`；`208-209` |
+| **release gate** | 发布门槛 | "deterministic 0/1 + judge 通过阈值"才允许 ship | `12-hermes-agent-small/README.md:191-216` |
+| **retrieval gate / consolidation** | 检索闸 / 蒸馏 | 检索前先问"这轮要不要记"；每 N 轮才异步蒸馏 | `12-hermes-agent-small/docs/architecture.md:85-97`；`12-hermes-agent-small/README.md:164-178` |
+
+---
+
+## 附录 B · 引用过的仓库文件（仓库根相对全路径）
 
 - `08-hermes-agent/01-arch.md`（657 行）
 - `08-hermes-agent/02-run-agent/README.md`（248 行）

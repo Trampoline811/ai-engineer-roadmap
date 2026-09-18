@@ -1,7 +1,44 @@
 # L5 观测层深度解析：Trace · Eval · 护栏（面试向）
 
 > 整合源：`08-hermes-agent\03-eval\`（最系统的评测体系）+ `12-hermes-agent-small\waku\ops\`（最贴工程的可跑实现）+ `02-RAG\04_RAG_Evaluation\`（RAG 评测衔接）+ `10-CICD\`（门禁落地）+ `05-model-route\07\trace\` `09\deploy\` `11\governance\`（trace 采集 / 蓝绿金丝雀 / 治理三段）。
-> 阅读档位：面试前 60 分钟通读；面试前 5 分钟只翻「5 分钟速查卡」。
+> 阅读档位：面试前 60 分钟通读；面试前 5 分钟只翻「附录 · 速查卡」。
+> **诚实标注**：本篇为冲刺压缩版（约 546 行）；按《专题创作指南》§转正规则，面试后可扩写至 1500+ 行完整版。
+
+---
+
+## 目录
+
+- [📍 本页定位与蒸馏溯源](#-本页定位与蒸馏溯源)
+- [0. 前言：为什么"没有 traces 你只是在猜"](#0-前言为什么没有-traces-你只是在猜)
+  - [0.1 痛点：Agent 答错了，但没人知道为什么](#01-痛点agent-答错了但没人知道为什么)
+  - [0.2 没有观测 vs 有观测](#02-没有观测-vs-有观测)
+  - [0.3 失败模式图：从症状到根因的 4 层](#03-失败模式图从症状到根因的-4-层)
+- [第一层 · 概念层：没有 traces 你只是在猜](#第一层--概念层没有-traces-你只是在猜)
+  - [1.0 统一类比：评测 = 体检](#10-统一类比评测--体检)
+  - [1.1 Agent Eval ≠ LLM Eval ≠ RAG Eval（先别混）](#11-agent-eval--llm-eval--rag-eval先别混)
+  - [1.2 为什么需要 trace：跑得动不等于看得见](#12-为什么需要-trace跑得动不等于看得见)
+  - [1.3 确定性测试 vs LLM-as-judge（轴别混淆）](#13-确定性测试-vs-llm-as-judge轴别混淆)
+  - [1.4 失败归因链（本节是面试最高频卡点）](#14-失败归因链本节是面试最高频卡点)
+  - [1.5 护栏库 ≠ 安全策略](#15-护栏库--安全策略)
+  - [📋 面试卡片：概念层](#-面试卡片概念层)
+- [第二层 · 实现层：hermes 与 waku 怎么落地](#第二层--实现层hermes-与-waku-怎么落地)
+  - [2.0 本章导引：符号表 · 学习路径](#20-本章导引符号表--学习路径)
+  - [2.1 hermes 评测三件套：契约 + 轨迹 + RCA](#21-hermes-评测三件套契约--轨迹--rca)
+  - [2.2 waku ops：可跑的 trace / 评分 / 门禁](#22-waku-ops可跑的-trace--评分--门禁)
+  - [2.3 hermes vs waku 跨系统对照](#23-hermes-vs-waku-跨系统对照)
+  - [📋 面试卡片：实现层](#-面试卡片实现层)
+- [第三层 · 工程层：评测怎么进 CI / 发布 / 治理](#第三层--工程层评测怎么进-ci--发布--治理)
+  - [3.1 决策树：一条 user message 答错了，先做什么](#31-决策树一条-user-message-答错了先做什么)
+  - [3.2 CI/CD 落地的最小闭环（面试高频）](#32-cicd-落地的最小闭环面试高频)
+  - [3.3 发布策略：蓝绿 / 金丝雀 / 灰度](#33-发布策略蓝绿--金丝雀--灰度)
+  - [3.4 治理三段：before / during / after](#34-治理三段before--during--after)
+  - [3.5 避坑清单（≥10 条）](#35-避坑清单10-条)
+  - [3.6 评测进 CI 的工程约束](#36-评测进-ci-的工程约束)
+  - [📋 面试卡片：工程层](#-面试卡片工程层)
+- [附录](#附录)
+  - [附录 A · 5 分钟速查卡（面试前可打印）](#附录-a--5-分钟速查卡面试前可打印)
+  - [附录 B · 跨仓库材料对照表（防止面试时被反问）](#附录-b--跨仓库材料对照表防止面试时被反问)
+  - [附录 C · 中英对照术语表](#附录-c--中英对照术语表)
 
 ---
 
@@ -56,7 +93,68 @@
 
 ---
 
+## 0. 前言：为什么"没有 traces 你只是在猜"
+
+### 0.1 痛点：Agent 答错了，但没人知道为什么
+
+上周三凌晨，线上 RAG Agent 第一次"翻车"——一个客户问"上周签的合同里违约条款怎么写"，Agent 自信地编了一段，引用了不存在的"第 8 条"。你打开 Grafana 看 latency 正常、看成功率 99.2%，看起来"系统一切正常"——除了那条用户提问彻底答错。
+
+你打开 `agent.log` 翻 2 小时日志：WARNING 散落各处，没有任何一行能告诉你"这次为什么会编"。你打开 `06_trace.md`：好消息它存在，坏消息——它告诉你"模型在 api#2 选了 `execute_code`"（来源：`08-hermes-agent\03-eval\demo\exports\eval_run\03_trace_rca.md:32`），但你不知道它**为什么选错**——system 没漂、role 没破、prompt 也刚调过。
+
+你只能拍脑袋猜：「是不是 prompt 改坏了？」「是不是该换模型？」「是不是 top_k 该小？」——**这就是没有 trace 的工程**：优化靠直觉，验证靠感觉，事故复盘靠猜。
+
+> **（课程观点）** HF Agentic Evals Workshop 把这类问题归到 Reliability 维度——Capability 涨得快，Reliability 涨得慢，「基准刷分很猛、生产用不起来」的主要原因（来源：`99-My idea\Agent eval\01-eval.md:18`）。一个 99 分的 RAGAS 报告 + 一条线上幻觉，**等于零**。
+
+### 0.2 没有观测 vs 有观测
+
+| 没有观测（裸奔） | 有观测（可度量反馈闭环） |
+|------------------|------------------------|
+| "感觉这次答得不错" — 不是工程 | 向老板汇报：`faithfulness 0.61 → 0.84` |
+| 改了 `chunk_size`，效果变好了？不确定 | 迭代方向明确：Recall 低 → 加大 `top_k` |
+| 上了 reranker，提升分？说不清 | 版本对比量化：v2 比 v1 Precision +12% |
+| A/B 选哪个？拍脑袋 | CI 自动回归：新版本悄悄变差 → 红灯 |
+| 线上事故复盘靠猜 | 冻成 fixture，根因可复现可讲 |
+
+> 上表是上一轮 D3 RAG 专题同一对比表在本层的**回扣**——评测对 RAG 与对 Agent 都一样：**没有它，优化全靠感觉游戏**（来源：`00-我的深度整合专题\RAG评估深度解析\RAG_Evaluation_Deep_Dive.md:62` + `08-hermes-agent\03-eval\README.md:86`）。
+
+### 0.3 失败模式图：从症状到根因的 4 层
+
+```
+                 Agent 答错了
+                       │  ← 症状
+                       ▼
+       ┌──────────────────────────────┐
+       │ L4 Trace：哪一 API 选了错工具？ │
+       │   L3 Eval：九项 check 红在哪？ │
+       │     L2 Invariant：role/system │
+       │       漂了吗？budget 空转了吗？│
+       │         L1 根因：model / 工具 /  │
+       │           prompt / memory / 检索 │
+       └──────────────────────────────┘
+```
+
+> 上图 4 层结构对应本文档 §1.4 的**归因链 8 步**（RAG → 解析 → 记忆 → mem0 → 工具 → loop → 模型 → 微调）——本图就是那张表的"四层抽象版"，每层细节见对应小节。
+
+---
+
 ## 第一层 · 概念层：没有 traces 你只是在猜
+
+### 1.0 统一类比：评测 = 体检
+
+> **一句话**：Agent 工程里的评测 = 去医院做体检。下面所有概念都回扣这个类比，请顺着读。
+
+| 概念 | 类比 | 在工程里做什么 |
+|------|------|---------------|
+| **Trace（trace 事件流）** | 化验单（血常规 / CT / 心电图） | 把"刚才那次回答到底发生了什么"完整记录 |
+| **Log（agent.log + session_tag）** | 病历本（按 session 钉在一起） | 任何时刻能 grep 出"这个 session 的 WARNING" |
+| **Eval（九项 check）** | 体检项目（血压 / 血糖 / 肝功） | 对**已冻结的**轨迹做 0/1 断言 |
+| **Judge（LLM-as-judge）** | 主任医师复诊（带主观判断） | 对开放性回答打 0-10 分 + 一句话原因 |
+| **Release Gate（`make gate`）** | 体检合格线（血压 ≥ 90/60 不放行） | deterministic 100% 必过 + judge 阈值 |
+| **护栏（retrieval_gate / 引用拒答）** | 安全气囊（事故时弹出，平时不显） | 入/出内容过滤、不该拉的不要拉 |
+| **策略（governance 三段）** | 医嘱（术前/术中/术后） | 业务规则落在时间轴上 |
+| **归因链 8 步** | 体检报告的「异常项」从上往下追 | RAG→解析→记忆→mem0→工具→loop→模型→微调 |
+
+> **回扣**：§1.1 三种 Eval 是"体检套餐"不同档位（LLM 套餐 / RAG 套餐 / Agent 套餐）；§1.2 Trace 是"化验单"为什么不能省；§1.3 确定性测试 vs LLM-judge 是"机器指标 vs 主任医师"分工；§1.4 归因链是"异常项从顶到底追"；§1.5 护栏 vs 策略 是"气囊 vs 医嘱"。
 
 ### 1.1 Agent Eval ≠ LLM Eval ≠ RAG Eval（先别混）
 
@@ -128,6 +226,29 @@ waku 把这两条轴做成两条独立分（来源：`12-hermes-agent-small\docs
 
 > 面试一句话：**护栏是"拦什么"，策略是"让不让做"——RAG 治理三段（before / during / after）就是策略在时间轴上的分布**（来源：`05-model-route\11\governance\before.py:14` `during.py:12` `after.py:20`）。
 
+### 1.6 因果链：没有 trace 就没有后面的一切
+
+```text
+一次失败（"Agent 答错了"）
+   │ 前提①
+   ▼
+有没有完整 trace（模型调用 / 检索上下文 / 工具调用 / 延迟 / token / 错误）
+   ├─ 没有 → 只能靠猜（这正是本层存在的意义）
+   └─ 有
+       │ 前提②
+       ▼
+能不能算指标（pass rate / 四象限 / 幻觉率 / 不变量）
+       │ 前提③
+       ▼
+能不能定阈值与门禁（deterministic 100% / judge 阈值 / 退出码）
+       │ 前提④
+       ▼
+能不能进 CI（回归不过就不发布）→ 这时才谈得上"持续评估"
+```
+
+**依赖要点**：**trace 是前提**——指标、门禁、CI 全都建在它上面。跳过 trace 直接买评测框架，是本层最常见的顺序错误。
+本仓库实证：`12-hermes-agent-small\waku\ops\tracing.py:1-40`、`12-hermes-agent-small\waku\ops\scoring.py`、`12-hermes-agent-small\waku\ops\release_gate.py`。
+
 ### 📋 面试卡片（概念层）
 
 1. **Agent Eval ≠ Pass Rate。** 至少报 Capability + Reliability + Cost + 轨迹。
@@ -140,6 +261,47 @@ waku 把这两条轴做成两条独立分（来源：`12-hermes-agent-small\docs
 ---
 
 ## 第二层 · 实现层：hermes 与 waku 怎么落地
+
+### 2.0 本章导引：符号表 · 学习路径
+
+#### 2.0.1 符号表
+
+| 符号 / 术语 | 含义 | 出现位置 | 在本仓库的对应文件 |
+|------------|------|---------|------------------|
+| `Trace` | 一次 user message 走完主循环的全事件流 | §2.1.2 / §2.2.1 | `12-hermes-agent-small\waku\ops\tracing.py:57-159` `<home>/traces/<date>.jsonl` |
+| `span` | trace 的最小单元（一次 LLM / 一次 tool / 一次 gate） | §2.2.1 | `05-model-route\07\trace\collector.py:10-58` |
+| `session_tag` | 把日志行钉到某次会话的 thread-local 标签 | §2.1.2 | `08-hermes-agent\03-eval\notes\02_logging_trace.md:81-90` |
+| `invariant`（行为契约） | 数据之间必须成立的关系，不冻结具体值 | §2.1.1 | `08-hermes-agent\03-eval\notes\01_eval_invariants.md:13` |
+| `change-detector`（反模式） | 冻结当前值的断言，模型发版就红 | §2.1.1 | `08-hermes-agent\03-eval\notes\01_eval_invariants.md:46-49` |
+| `RCA`（Root Cause Analysis） | 把"答错了"追到具体 api# / 行号 + 修复建议 | §2.1.3 | `08-hermes-agent\03-eval\demo\teaching\harness\rca.py:9-55` |
+| `eval_case` | 一条评测 case = `expected_tools` / `forbidden` / `max_steps` / `allowed_exits` | §2.1.3 | `08-hermes-agent\03-eval\demo\fixtures\eval_cases.json`（仓库存在但题面要求保留 markdown 引用即可） |
+| `gate`（release_gate） | 发版门禁：deterministic 100% + judge 阈值 | §2.2.3 / §3.2 | `12-hermes-agent-small\waku\ops\release_gate.py:84-110` |
+| `judge`（LLM-as-judge） | 用一个**不参赛**的模型给主观回答打分 | §2.2.2 | `12-hermes-agent-small\waku\ops\judge.py:60-101` |
+| `Completion` | 0/1 决定论：expect_tool / expect_in_args / min_tool_calls | §2.2.2 | `12-hermes-agent-small\waku\ops\scoring.py:31-47` |
+| `Quality` | 0-10 主观分 + 一句 reason（K3 如 GPT-5.6-sol 打分） | §2.2.2 | `12-hermes-agent-small\docs\benchmarks.md:55-67` |
+| `pass rate` | 整批 case 中 `passed == True` 的比例（aggregate） | §1.4 | `99-My idea\Agent eval\01-eval.md:227-229` 警示：单独看 aggregate = 信息不足 |
+| `p99`（P99 latency） | 99% 请求的延迟上界，观测 SLO 用 | §1.2 | `08-hermes-agent\03-eval\notes\02_logging_trace.md:13` |
+| `JSONL` | 一行一事件的纯文本格式，waku trace / Compare / eval_runs 通用 | §2.2.1 / §2.2.4 | `12-hermes-agent-small\waku\ops\tracing.py:99-101` |
+| `OTel`（OpenTelemetry） | trace 的工业标准，waku 通过 OTLP endpoint 可选接入 | §2.2.1 | `12-hermes-agent-small\waku\ops\tracing.py:9-19` |
+| `canary`（金丝雀） | 按 user_id 哈希稳定分流 5~10% 到新版本 | §3.3 | `05-model-route\09\deploy\canary.py:4-7` |
+| `hallucination rate` | flagged 幻觉数 / 总反馈记录，≥ 阈值触发 review | §3.4 | `05-model-route\11\governance\after.py:20-26` |
+
+#### 2.0.2 学习路径
+
+```mermaid
+graph TD
+  A["§2.1 hermes 不变量心智<br/>change-detector vs invariant"] --> B["§2.1.2 Trace / Log 双轨<br/>session_tag + trace 事件流"]
+  B --> C["§2.1.3 双层 Eval Harness<br/>pytest contract + offline suite"]
+  C --> D["§2.1.4 真实产物：正例 vs 负例 RCA"]
+  D --> E["§2.2.1 waku tracing.py<br/>JSONL always-on + OTel 可选"]
+  E --> F["§2.2.2 scoring + judge<br/>Completion ⊕ Quality 双轴"]
+  F --> G["§2.2.3 release_gate<br/>deterministic 100% + judge 阈值"]
+  G --> H["§2.2.4 Compare 独立 JSONL<br/>防污染 state.db"]
+  H --> I["§2.3 hermes vs waku 跨系统对照"]
+```
+
+> **快速模式**（面试前 30 分钟）：只看 §2.1.1（不变量心智）+ §2.2.3（release_gate） + §2.3（对照表）。
+> **深入模式**（要写码）：顺着 mermaid 顺序读，每节都跑伪代码再翻真实源码。
 
 ### 2.1 hermes 评测三件套：契约 + 轨迹 + RCA
 
@@ -507,7 +669,9 @@ after ：FeedbackRecord → hallucination_rate() ≥ 5% → needs_review()
 
 ---
 
-## 5 分钟速查卡
+## 附录
+
+### 附录 A · 5 分钟速查卡（面试前可打印）
 
 | 维度 | 一句话 | 本仓库在哪 |
 |------|--------|-----------|
@@ -532,7 +696,7 @@ after ：FeedbackRecord → hallucination_rate() ≥ 5% → needs_review()
 
 ---
 
-## 附：跨仓库材料对照表（防止面试时被反问）
+### 附录 B · 跨仓库材料对照表（防止面试时被反问）
 
 | 概念 | hermes（`08-hermes-agent\03-eval`） | waku（`12-hermes-agent-small\waku`） | RAG 专题 | CICD / model-route |
 |------|-------------------------------------|------------------------------------|----------|--------------------|

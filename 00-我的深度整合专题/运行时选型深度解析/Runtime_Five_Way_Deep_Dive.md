@@ -4,7 +4,31 @@
 
 ---
 
-## 📍 本页定位与蒸馏溯源
+## 目录
+
+- [📍 本页定位与蒸馏溯源](#-本页定位与蒸馏溯源)
+- [0. 前言：为什么"运行时"是选型最容易翻车的一层](#0-前言为什么运行时是选型最容易翻车的一层)
+- [一、概念层：Runtime 是什么](#一概念层runtime-是什么)
+  - [1.0 统一类比：runtime = 城市交通调度中心](#10-统一类比runtime--城市交通调度中心)
+  - [1.1 Runtime 在六层栈里的位置](#11-runtime-在六层栈里的位置)
+  - [1.2 一个完整 Harness 的五个必备件](#12-一个完整-harness-的五个必备件)
+  - [1.3 为什么"编排库"与"成品 harness"容易被叠成两层](#13-为什么编排库与成品-harness-容易被叠成两层)
+  - [1.4 一个最小可跑循环的 6 步骨架](#14-一个最小可跑循环的-6-步骨架全文统一口径)
+  - [1.5 因果链：选型判断的依赖顺序](#15-因果链选型判断的依赖顺序谁是谁的前提)
+  - [1.6 📋 面试卡片（概念层）](#16--面试卡片概念层)
+- [二、实现层：五方 Runtime 横向对照](#二实现层五方-runtime-横向对照)
+  - [2.0 本章导引：符号表 · 双模式阅读 · 学习路径](#20-本章导引符号表--双模式阅读--学习路径)
+  - [2.1 五方 Runtime 对照表](#21-五方-runtime-对照表)
+  - [2.2 各自关键机制（实现层细节）](#22-各自关键机制实现层细节)
+  - [2.3 📋 面试卡片（实现层）](#23--面试卡片实现层)
+- [三、同一个循环，五种写法](#三同一个循环五种写法本节是本文最重要的资产)
+- [四、工程层：选型 + 避坑](#四工程层选型--避坑)
+- [五、多智能体：什么时候值得拆](#五多智能体什么时候值得拆)
+- [六、5 分钟速查卡](#六5-分钟速查卡末尾专用)
+- [七、面试问答卡](#七面试问答卡精选-6-问与选型卡互补不重复)
+- [附录 A：本文引用的仓库文件](#附录-a本文引用的仓库文件绝对路径)
+- [附录 B：中英对照术语表](#附录-b中英对照术语表)
+
 
 ### a) 位置
 - D4 上午「**源码对照**」时间盒（与 D2 记忆、D3 RAG、D5 收尾串联）。
@@ -17,7 +41,7 @@
 |------|--------|------|---------------|
 | 选型卡 | `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` | 312 | 衔接卡；本文不复述其已写结论 |
 | LangGraph | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\{graph,llm,rag,threads}.py` + `frontend\hitl.py` | 80/106/92/10/183 | **最小可跑成品**：StateGraph + SqliteSaver + HITL；DeepSeek ChatOpenAI + BGE；`@tool` RAG；thread_id 反查；`Command(resume)` |
-| 多 Agent | `11-langgraph\03-project-TripMate-…\backend\{graph,state,runner}.py` | 27/13/126 | 顺序 handoff：flight→hotel→itinerary→final |
+| 多 Agent | `11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\backend\{graph.py, state.py, runner.py}` | 27/13/126 | 顺序 handoff：flight→hotel→itinerary→final |
 | Hermes 鸟瞰 | `08-hermes-agent\01-arch.md`（§1-§3.3） | 657 | Session 冻结 vs Turn 组装 |
 | Hermes 循环 | `08-hermes-agent\02-run-agent\{README.md, notes\1_agent_loop.md, notes\2_tools_discovery.md, notes\4_run_conversation_callflow.md, hermes_src\agent\conversation_loop.py}` | 248/120/84/367/5355 | call flow + while 骨架 + 三道刹车 + 截胡 + 真源码 prologue/while |
 | Hermes forwarder | `08-hermes-agent\hermes-study\run_agent.py` | 6055（仅头注） | `AIAgent.run_conversation` 是 forwarder（行 24-72） |
@@ -33,7 +57,67 @@
 
 ---
 
+## 0. 前言：为什么"运行时"是选型最容易翻车的一层
+
+### 0.1 痛点：这一层的错，代价最大
+
+前三层（推理 / 上下文 / 动作）选错，通常还能靠改配置或换库补回来；**运行时选错，是整个工程结构性的错**——
+你把循环、状态、人审都押在了一个不合身的骨架上，后面每加一个功能都在跟它较劲。
+
+最常见的三种真实翻车姿势：
+1. "我熟 LangGraph，那我用 LangGraph 做一切"——结果拿它写线性 SOP，越写越重（`11-langgraph\` 里真正合适的是"模型可能反复调工具"的场景）；
+2. "Hermes 听起来更牛，直接上"——结果没读 `08-hermes-agent\01-arch.md` 就动手，讲不出 SOUL/user.md/memory.md 三件套，面试一追问就露馅；
+3. "两个都用上，互补"——**同一个进程里叠两套循环**，两条心跳抢同一份 transcript（这才是本层最贵的错）。
+
+### 0.2 对比表：认清"同层二选一"能省下什么
+
+| 维度 | ❌ 把它俩当上下两层 | ✅ 认清是同层二选一 |
+|---|---|---|
+| 架构 | 容易叠两套循环、状态分裂 | 一套编排骨架 + 另一条以 tool/middleware 形式挂载 |
+| 学习成本 | 两边都学一半，谁都讲不深 | 主攻一个，另一个只需能对比（"为什么不选它"）|
+| 面试表现 | 被追问"两者关系"就卡住 | 能主动讲"互斥替代，避免 harness 重复建设" |
+| 工程风险 | 状态/人审/持久化各写一套，长期维护地狱 | 状态与人审只有一处真相 |
+
+### 0.3 失败模式 ASCII 图
+
+```text
+选 runtime 的四种典型翻车
+  │
+  ├── ❌ 翻车 1：叠两套循环（LangGraph 图里再写 while）
+  │       症状：messages 双写、checkpoint 与自研状态不一致、成本翻倍
+  │       正解：骨架二选一；缺失能力用 tool / middleware 补
+  │
+  ├── ❌ 翻车 2：把 checkpoint 当"长期记忆"
+  │       症状：换 thread_id 就"失忆"；用户偏好永远记不住
+  │       正解：checkpoint = 会话恢复；长期记忆另立一层（见 L2）
+  │
+  ├── ❌ 翻车 3：没有停机条件
+  │       症状：while True 烧钱到 API 限流；无人值守跑一夜
+  │       正解：三重刹车（max_iterations / budget / grace call）+ 中断信号
+  │
+  └── ❌ 翻车 4：一上来硬啃 16k 行源码
+          症状：读了 2 小时没跑通，信心崩掉
+          正解：按本文 §2.0 的双模式阅读——先 95 行的 waku，再 Hermes 主循环段
+```
+
+---
+
 ## 一、概念层：Runtime 是什么
+
+### 1.0 统一类比：runtime = 城市交通调度中心
+
+**贯穿全文的类比**：一个 runtime 就是一座城市的**交通调度中心**。
+
+| 类比物 | 对应概念 | 本文后续对应章节 |
+|---|---|---|
+| **路网 + 信号灯** | 主循环与停止条件（什么时候走、什么时候停） | §1.4 六步骨架、§3.1–§3.5 五种写法 |
+| **停车场** | 状态/会话持久化（车停哪儿、回来还能找到） | §2.1 对照表"状态/会话怎么存" |
+| **交通工具** | 工具与协议（能开什么车、走哪条路） | §2.1"工具注册怎么做" |
+| **人工交警** | HITL / 审批（关键时刻必须有人点头） | §2.1"HITL 做法"、§5.4 |
+| **调度规章** | 配置与扩展点（谁能改规则、怎么热更新） | §2.1"扩展点在哪" |
+
+**判定一个 runtime 好不好，就看这五件是否齐备且彼此不打架**——这也正是 §1.2 的"五个必备件"。
+后文每张对照表都会回到这个类比：**路网是循环、停车场是状态、车是工具、交警是人审、规章是配置**。
 
 ### 1.1 Runtime 在六层栈里的位置
 
@@ -90,7 +174,28 @@ function flow（最小循环骨架）
 
 五个 runtime 在 6 步上的**主要差异**：①组装 LangGraph 声明式累加（`TypedDict + add_messages`）vs 其余命令式 `append` vs DSH 每步重新组装；②调 LangGraph 节点式 vs while/for 内；③解析 LangGraph `tools_condition` vs Hermes/waku/Pi/DSH 看 `tool_calls`/`tool_use` 列表；④执行 LangGraph `ToolNode` vs Hermes 截胡+registry vs waku `tools.execute` vs Pi `executeToolCalls` vs DSH `registry.dispatch`；⑥停止 LangGraph 触顶+interrupt vs Hermes max_iter+budget+grace+verify vs waku iteration+兜底文本 vs Pi 四道门+双队列 vs DSH 仅"模型不再要工具"。
 
-### 1.5 📋 面试卡片（概念层）
+### 1.5 因果链：选型判断的依赖顺序（谁是谁的前提）
+
+```
+业务形态：终端里干活的编码 Agent？ vs 业务流程里的可恢复工作流？
+   │  ① 决定"要不要可恢复/可打断"
+   ▼
+是否需要 持久化 + 可恢复 + 人审（HITL）
+   │  ② 决定"骨架选谁"
+   ├─ 要 → LangGraph 主场（checkpointer / interrupt / time travel 现成）
+   └─ 不要 → Hermes 这类成品 harness 更省事（循环/工具/记忆/网关全预装）
+            │  ③ 决定"状态放哪"
+            ▼
+        状态放哪：SQLite transcript？checkpointer？Markdown 三件套？
+            │  ④ 决定"人审怎么接"
+            ▼
+        人审怎么接：图内 interrupt？审批队列 + 工具白名单？
+```
+
+**依赖关系要点**：第 ② 步之前不要谈框架品牌；第 ③④ 步的选择被第 ①② 步锁死。
+面试被问"你为什么选 X"，按这条链答（形态 → 可恢复性 → 状态 → 人审），比直接说"我们用 X"稳得多。
+
+### 1.6 📋 面试卡片（概念层）
 
 - **Q1：runtime / 编排层 / harness 三个词的关系？**
   > 都在 L4。Runtime 是层名；编排层是这层做的事；harness 是这层装出来的东西。LangGraph 是"你写 harness 的库"；Hermes / waku / pi / DSH 是"已经装好的 harness"。
@@ -105,6 +210,42 @@ function flow（最小循环骨架）
 
 ## 二、实现层：五方 Runtime 横向对照
 
+### 2.0 本章导引：符号表 · 双模式阅读 · 学习路径
+
+#### 符号表
+
+| 符号/术语 | 含义 | 本文出现处 |
+|---|---|---|
+| **runtime** | 拥有"循环 + 状态 + 工具 + 停机 + 人审"的能力层 | §1.1 六层栈定位 |
+| **harness** | 装这些件的盒子（系统提示词、注册表、权限、沙箱、日志） | §1.2 |
+| **loop / 内循环** | 一次 turn 内"调模型 → 是否要工具 → 执行 → 回灌"的反复 | §1.4、§3.x |
+| **turn / session** | turn = 一问一答；session = 跨 turn 长生命周期（SP 冻结于此） | §2.1 |
+| **checkpointer / thread_id** | 状态持久化与线程标识（= 类比里的"停车场车位号"） | §3.1 |
+| **interrupt / HITL** | 图内中断 + 人审放行（= "人工交警"） | §2.1、§5.4 |
+| **iteration budget / grace call** | 迭代预算；超预算后允许的最后一次调用 | §3.2 |
+| **handoff** | 子 Agent 移交控制权（= 换司机/换车队） | §5.3 |
+| **toolset / registry** | 工具集合与注册表；循环只消费 schema | §2.1 |
+| **transcript** | 落库的对话记录（Hermes 用 SQLite + FTS5） | §2.1 |
+
+#### 双模式阅读
+
+- **快速模式（面试前 3 天，25 分钟）**：只读 §1.2 五个必备件 → §2.1 五方对照表 → §4.1 选型决策树 → §4.2 避坑清单 → §6 五分钟速查卡 → §8 面试问答卡。
+  目标：能对任一 runtime 说出"循环在哪、状态存哪、人审怎么做"。
+- **深入模式（要源头对比，3–5 小时）**：按 §3.1→§3.5 顺序读"同一个循环的五个写法"（每个都给真源码行号），再回头读 §2.2 各自关键机制。
+  目标：能指着文件说"这一行的作用"，并解释为什么五种写法本质是同一控制流。
+
+#### 学习路径
+
+```mermaid
+graph TD
+  A["§1 概念层：Runtime 是什么 + 五个必备件"] --> B["§2.1 五方对照表（全局地图）"]
+  B --> C["§3 同一个循环，五种写法（真源码行号）"]
+  C --> D["§4.1 决策树 + §4.2 避坑"]
+  D --> E["§5 多智能体：什么时候值得拆"]
+  E --> F["§6 速查卡 · §7 术语表 · §8 面试问答卡"]
+  C -.->|"先读 95 行的 waku"| C1["12-hermes-agent-small\waku\loop\agent.py"]
+  C1 -.->|"再看主循环段"| C2["08-hermes-agent\02-run-agent\hermes_src\agent\conversation_loop.py"]
+```
 ### 2.1 五方 Runtime 对照表
 
 > 列含义（与本节正文一一对应）：`loop 在哪个文件` 给**全路径 + 行号**；其余列精确到关键文件。
@@ -113,12 +254,12 @@ function flow（最小循环骨架）
 |---|---|---|---|---|---|
 | **是什么** | 图编排**库**：你写 State/Node/Edge | 成品**harness**（Python）：自带循环/SP 组装/Tools/Memory/Gateway | 最小可读 harness（约 1/100 代码量）：本地优先个人助手 | 极简 Core + Interactive 双层（TS）；UI/TUI/RPC/SDK 都进同一 Core | 配置驱动 harness（仓库内仅一篇 `01.arch.md`）；"code vs config"是分水岭 |
 | **loop 在哪个文件** | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:73-80`（图编排：`add_conditional_edges("chat_node", tools_condition)`） | `08-hermes-agent\02-run-agent\hermes_src\agent\conversation_loop.py:643`（真 while 入口）；**forwarder** 见 `08-hermes-agent\hermes-study\run_agent.py` 头注（`run_conversation` 是薄转发） | `12-hermes-agent-small\waku\loop\agent.py:62-112`（≈95 行 `for i in 1..max_iterations`） | `13-pi-agent\02-agent-loop.md:265-297`（双层 while：内层消化 tool+steering、外层消化 follow-up） | `14-deepseek-harness\01.arch.md:21-56`（`Agent Loop` 思维图，无源码；D4 内**只有文档**） |
-| **状态/会话怎么存** | `SqliteSaver` + `thread_id`：`backend\graph.py:70-71` 建连接 → `chatbot.compile(checkpointer=checkpoint)`；`threads.py:7-9` 用 `checkpoint.list(None)` 反查所有 thread_id | SQLite transcript：每 Turn 落库（`SessionDB`），SP **Session 启动时冻结**（`01-arch.md:181-201`） | 单文件 SQLite + FTS5：`waku\db.py:12-76` 建 `state.db`（含 `facts_fts` / `episodes_fts` / `chat_log`），自动迁移（`:79-95`） | **会话是树**：JSONL + `parentId`（`13-pi-agent\00-learn-guide.md:9-65`），`/tree` 同文件切枝、`/fork`/`/clone` 新文件 | 配置 + 配置驱动的"每轮重新组装"（`01.arch.md:182-217`），持久化在文档中**未给出**实现级路径（推断：靠自身 store） |
-| **工具注册怎么做** | LangChain `@tool` 装饰器：`backend\rag.py:53-92` 的 `rag_tool`；图用 `ToolNode(tools)`（`graph.py:68`） | `tools/*.py` import 时 `registry.register(...)` → `discover_builtin_tools` → `toolsets._HERMES_CORE_TOOLS`；循环只消费 schema（`notes\2_tools_discovery.md:18-67`） | `ToolRegistry.register(Tool)` + `execute(name, args)`（`waku\tools\registry.py:30-49`）；失败转文本不抛（`:46-48`） | `executeToolCalls`：`prepare→execute→finalize`；并行/串行由 `executionMode` 控制（`13-pi-agent\02-agent-loop.md:380-407`） | **Tool ≠ Skill**（`01.arch.md:229-270`）：Tool=函数、确定性返回；Skill=Agent 自己执行流程，烧 token |
-| **人审（HITL）怎么做** | `interrupt` + `Command(resume=…)`：在节点里抛 `Interrupt`，恢复用 `Command`；Streamlit 侧用 `chatbot.get_state(config)` 拿 `state_snapshot.interrupts`（`frontend\hitl.py:11-45, 89-183`） | 多种入口：`/stop` interrupt、todo 截胡、approval/clarify gateway 命令、`09-lang-serial-not\README.md` §7 | **waku 没有专用审批**：靠 streamlit/`frontend` 层自己接，**Core 本身不弹窗**（推断：见 Pi 同款设计哲学） | **Core 无审批弹窗**：① 队列纠偏 `steer()` / `followUp()`；② 扩展 `beforeToolCall` 拦截；③ UI `await ui.select`（`06-HITL.md:15-90`） | 文档未明确（推断）：code 路径可以"自我修改"——Human 退到旁路靠 Eval + Release Gate（`01.arch.md:140-178`） |
-| **记忆怎么管** | `messages: Annotated[list, add_messages]` 累加；`store`/`checkpointer` 可选；`threads.py` 侧边栏 = `checkpoint.list(None)`（`backend\threads.py:1-10`） | 三层：① SOUL/user.md/memory.md **Session 启动冻结**（`01-arch.md:175-201`）；② SQLite transcript；③ 可选 External（mem0/Honcho/SuperMemory） | 三支柱+两道工序：semantic/episodic/procedural + **retrieval_gate**（先问要不要）+ **consolidation**（每 N 轮蒸馏，`waku\runtime\session.py:64-89`） | **Prompt 是栈**：default → `APPEND_SYSTEM.md` → `AGENTS.md`/`CLAUDE.md` → skills → cwd（`00-learn-guide.md:67-118`） | 配置驱动；Agent 可改自身配置再热重载（`01.arch.md:144-217`）；具体"记忆三轨"未在文档中给出（推断） |
-| **扩展点在哪** | 子图（subgraph）+ `interrupt` + LangSmith | Plugin（`~/.hermes/plugins/`）+ MemoryProvider ABC + skill + MCP | MCP 桥（`waku\tools\mcp_client.py` 路径，README §"Loop · Tools"）+ extras（`[voice]`/`[telegram]`/`[mcp]`） | **Extensions** 六类钩子：tools/commands/events/UI/providers/state（`00-learn-guide.md:172-201`） | "每一块都是插件，包括 Loop"（`01.arch.md:138-142`） |
-| **能跑吗（本机可跑性诚实评估）** | ⚠ **可跑**（`02-Agentic-Chatbot-using-LangGraph`）：需 `DEEPSEEK_API_KEY` + `TAVILY_API_KEY`；`pip install -r requirements.txt && streamlit run app.py` | ⚠ **可跑**（`02-run-agent\demo\run_agent_loop.py`）：需 DeepSeek key；README `python run_agent_loop.py`（具体命令已记在选型卡 §7） | ⚠ **可跑**：需 `WAKU_PROVIDER + 对应 key`；`uv venv && uv pip install -e .`（`README.md:33-53`） | 📖 **本仓库只读**：核心源码不在仓（`00-learn-guide.md:3` 指向 `D:\workspace\doc\面试狂魔\…\pi`，**本机不在**）；跑法未验证 | 📖 **本仓库只读**：仅 `01.arch.md` 296 行，无可跑代码 |
+| **状态/会话怎么存** | `SqliteSaver` + `thread_id`：`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:70-71` 建连接 → `chatbot.compile(checkpointer=checkpoint)`；`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py:7-9` 用 `checkpoint.list(None)` 反查所有 thread_id | SQLite transcript：每 Turn 落库（`SessionDB`），SP **Session 启动时冻结**（`08-hermes-agent\01-arch.md:181-201`） | 单文件 SQLite + FTS5：`12-hermes-agent-small\waku\db.py:12-76` 建 `state.db`（含 `facts_fts` / `episodes_fts` / `chat_log`），自动迁移（`:79-95`） | **会话是树**：JSONL + `parentId`（`13-pi-agent\00-learn-guide.md:9-65`），`/tree` 同文件切枝、`/fork`/`/clone` 新文件 | 配置 + 配置驱动的"每轮重新组装"（`14-deepseek-harness\01.arch.md:182-217`），持久化在文档中**未给出**实现级路径（推断：靠自身 store） |
+| **工具注册怎么做** | LangChain `@tool` 装饰器：`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\rag.py:53-92` 的 `rag_tool`；图用 `ToolNode(tools)`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:68`） | `08-hermes-agent\02-run-agent\hermes_src\tools\*.py` import 时 `registry.register(...)` → `discover_builtin_tools` → `toolsets._HERMES_CORE_TOOLS`；循环只消费 schema（`08-hermes-agent\02-run-agent\notes\2_tools_discovery.md:18-67`） | `ToolRegistry.register(Tool)` + `execute(name, args)`（`12-hermes-agent-small\waku\tools\registry.py:30-49`）；失败转文本不抛（`:46-48`） | `executeToolCalls`：`prepare→execute→finalize`；并行/串行由 `executionMode` 控制（`13-pi-agent\02-agent-loop.md:380-407`） | **Tool ≠ Skill**（`14-deepseek-harness\01.arch.md:229-270`）：Tool=函数、确定性返回；Skill=Agent 自己执行流程，烧 token |
+| **人审（HITL）怎么做** | `interrupt` + `Command(resume=…)`：在节点里抛 `Interrupt`，恢复用 `Command`；Streamlit 侧用 `chatbot.get_state(config)` 拿 `state_snapshot.interrupts`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend\hitl.py:11-45, 89-183`） | 多种入口：`/stop` interrupt、todo 截胡、approval/clarify gateway 命令、`08-hermes-agent\09-lang-serial-not\README.md` §7 | **waku 没有专用审批**：靠 streamlit/`frontend` 层自己接，**Core 本身不弹窗**（推断：见 Pi 同款设计哲学） | **Core 无审批弹窗**：① 队列纠偏 `steer()` / `followUp()`；② 扩展 `beforeToolCall` 拦截；③ UI `await ui.select`（`13-pi-agent\06-HITL.md:15-90`） | 文档未明确（推断）：code 路径可以"自我修改"——Human 退到旁路靠 Eval + Release Gate（`14-deepseek-harness\01.arch.md:140-178`） |
+| **记忆怎么管** | `messages: Annotated[list, add_messages]` 累加；`store`/`checkpointer` 可选；`threads.py` 侧边栏 = `checkpoint.list(None)`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py:1-10`） | 三层：① SOUL/user.md/memory.md **Session 启动冻结**（`08-hermes-agent\01-arch.md:175-201`）；② SQLite transcript；③ 可选 External（mem0/Honcho/SuperMemory） | 三支柱+两道工序：semantic/episodic/procedural + **retrieval_gate**（先问要不要）+ **consolidation**（每 N 轮蒸馏，`12-hermes-agent-small\waku\runtime\session.py:64-89`） | **Prompt 是栈**：default → `APPEND_SYSTEM.md` → `AGENTS.md`/`CLAUDE.md` → skills → cwd（`13-pi-agent\00-learn-guide.md:67-118`） | 配置驱动；Agent 可改自身配置再热重载（`14-deepseek-harness\01.arch.md:144-217`）；具体"记忆三轨"未在文档中给出（推断） |
+| **扩展点在哪** | 子图（subgraph）+ `interrupt` + LangSmith | Plugin（`~/.hermes/plugins/`）+ MemoryProvider ABC + skill + MCP | MCP 桥（`12-hermes-agent-small\waku\tools\mcp_client.py` 路径，`12-hermes-agent-small\README.md` §"Loop · Tools"）+ extras（`[voice]`/`[telegram]`/`[mcp]`） | **Extensions** 六类钩子：tools/commands/events/UI/providers/state（`13-pi-agent\00-learn-guide.md:172-201`） | "每一块都是插件，包括 Loop"（`14-deepseek-harness\01.arch.md:138-142`） |
+| **能跑吗（本机可跑性诚实评估）** | ⚠ **可跑**（`11-langgraph\02-Agentic-Chatbot-using-LangGraph`）：需 `DEEPSEEK_API_KEY` + `TAVILY_API_KEY`；`pip install -r requirements.txt && streamlit run app.py` | ⚠ **可跑**（`08-hermes-agent\02-run-agent\demo\run_agent_loop.py`）：需 DeepSeek key；README `python run_agent_loop.py`（具体命令已记在选型卡 §7） | ⚠ **可跑**：需 `WAKU_PROVIDER + 对应 key`；`uv venv && uv pip install -e .`（`12-hermes-agent-small\README.md:33-53`） | 📖 **本仓库只读**：核心源码不在仓（`13-pi-agent\00-learn-guide.md:3` 指向 `D:\workspace\doc\面试狂魔\…\pi`，**本机不在**）；跑法未验证 | 📖 **本仓库只读**：仅 `14-deepseek-harness\01.arch.md` 296 行，无可跑代码 |
 
 ### 2.2 各自关键机制（实现层细节）
 
@@ -465,7 +606,7 @@ function flow（DSH：每步重新组装）
 
 | 模式 | 实证文件 | 关键思想 |
 |------|---------|---------|
-| **Pipeline（顺序 handoff）** | `11-langgraph\03-project-TripMate-…\backend\graph.py:1-27`（flight→hotel→itinerary→final） | 子 Agent 顺序执行，写共享 `TravelState` 后交下一个 |
+| **Pipeline（顺序 handoff）** | `11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\backend\graph.py:1-27`（flight→hotel→itinerary→final） | 子 Agent 顺序执行，写共享 `TravelState` 后交下一个 |
 | **单步多视角** | `04-multiagent\01-single_vs_multi.py:58-72`（analyst/architect/coder） | 多步但不并行；每步独立 |
 | **LangGraph 图编排** | `04-multiagent\04-langgraph_style.py:32-97`（`SimpleGraph`+`add_node`+`add_edge`） | 节点共享 state、有向边 |
 | **任务路由** | `04-multiagent\09-task_routing.py:47-76`（能力 ⊆ 技能 + `min(load)`） | 多 Agent 时任务分派 |
@@ -563,7 +704,7 @@ function flow（DSH：每步重新组装）
 
 ---
 
-## 八、面试问答卡（精选 6 问，与选型卡互补不重复）
+## 七、面试问答卡（精选 6 问，与选型卡互补不重复）
 
 > 选型卡已答"是什么/同层/语言门槛/HITL/记忆/Prompt Cache"等基础问题。本文补以下 6 问。
 
@@ -614,3 +755,35 @@ function flow（DSH：每步重新组装）
 > 3. §4.2 第 14 条 "memory 工具 schema 冲突……要立刻生效就新开 Session"——基于 `01-arch.md:181-201` 的推论，仓库未直说"立刻生效路径"。
 
 > 备注：本文档**未修改任何源文件**；仅在 `00-我的深度整合专题\运行时选型深度解析\` 新建了 1 个 Markdown 文件。仓库根 `E:\AI_resource\AI-Engineer-from-scrach-main\` 未受影响。
+
+## 附录 B：中英对照术语表
+
+| 英文术语 | 中文 | 一句话解释 |
+|---|---|---|
+| runtime | 运行时 | 提供循环/状态/工具/停机/人审的能力层 |
+| harness | 外壳工程 | 装上述件的盒子：系统提示词、注册表、权限、沙箱、日志 |
+| orchestration | 编排 | 决定"谁先谁后、走哪条边"；本文特指图编排 vs 内置循环 |
+| loop | 主循环 | 调模型 → 工具 → 回灌的反复过程 |
+| turn | 轮次 | 一次用户请求引发的完整处理（内含若干 loop 迭代）|
+| session | 会话 | 跨多轮的长期上下文容器；Hermes 的 SP 在此冻结 |
+| context window | 上下文窗口 | 模型单次可见的 token 上限 |
+| compaction / compression | 压缩 | 把历史摘要化以腾出窗口（Hermes 默认 50% 触发）|
+| transcript | 对话记录 | 落库的完整消息序列（Hermes 用 SQLite + FTS5）|
+| checkpoint / checkpointer | 检查点 / 检查点器 | 把图状态持久化，支持续跑与时间旅行 |
+| thread_id | 线程标识 | 会话键；checkpointer 按它存取状态 |
+| interrupt | 中断 | 图内暂停以等待外部输入（人审）|
+| HITL（human-in-the-loop） | 人在环 | 关键动作需人工确认 |
+| time travel | 时间旅行 | 基于历史检查点回到任意步骤重放或分叉 |
+| tool registry | 工具注册表 | 工具名 → 实现的映射；循环只消费 schema |
+| toolset | 工具集 | 一组按场景打包的工具 |
+| skill | 技能 | 让 Agent 自己执行流程的提示词包（≠ tool）|
+| handoff | 移交 | 子 Agent 之间转移控制权 |
+| subagent | 子代理 | 在独立上下文里跑完整循环的 Agent |
+| iteration budget | 迭代预算 | 循环的最大迭代次数 |
+| grace call | 宽限调用 | 超预算后允许的最后一次调用（用于收口）|
+| abort / cancel | 中断信号 | 外部要求停止循环的事件 |
+| sandbox | 沙箱 | 隔离执行环境（docker / local / ssh / modal / daytona）|
+| gateway | 网关 | 把多平台消息接入同一 runtime 的适配层 |
+| cron / scheduler | 定时调度 | 定时触发 Agent 任务 |
+| canary | 金丝雀 | 小流量发布验证 |
+| durable execution | 持久化执行 | 进程崩溃后可续跑的执行模型 |

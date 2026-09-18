@@ -5,6 +5,108 @@
 >
 > **目标读者**：会 Python、求职 AI 应用开发（RAG/Agent）、要把三文压成"面试能讲出来的架构语言"的人。
 > **范围红线**：只写三文里真实存在的内容，不引入外部框架细节补全。
+>
+> > 本篇为冲刺压缩版（约 540 行）；按《专题创作指南》§转正规则，面试后可扩写至 1500+ 行完整版。
+
+---
+
+## 目录
+
+- [0. 前言：为什么 Loop Engineering 是"缺失的一环"](#0-前言为什么-loop-engineering-是缺失的一环)
+- [📍 本页定位与蒸馏溯源](#-本页定位与蒸馏溯源)
+  - [a) 在计划中的位置](#a-在计划中的位置)
+  - [b) 被蒸馏源明细](#b-被蒸馏源明细)
+  - [c) 蒸馏理由与方法](#c-蒸馏理由与方法)
+- [🔗 三文关系图（最重要的价值）](#-三文关系图最重要的价值)
+  - [附录：Loop 在三文中的演进时间线（来自 `09-loop-engineering/02.loop-engineering.md:87-104`）](#附录loop-在三文中的演进时间线)
+- [第一层 · 概念层：四层演进与 Loop 的位置](#第一层--概念层四层演进与-loop-的位置)
+  - [1.1 四层"叠环"模型（来自 `09-loop-engineering/01.context-looop-engineering.md:5-12`）](#11-四层叠环模型)
+  - [1.2 上下文膨胀与泄漏（来自 `09-loop-engineering/01.context-looop-engineering.md:134-138`）](#12-上下文膨胀与泄漏)
+  - [1.3 同一个 NASA 故事（来自 `09-loop-engineering/01.context-looop-engineering.md:188-222`）](#13-同一个-nasa-故事)
+  - [1.4 Loop 的核心定义（综合三文）](#14-loop-的核心定义综合三文)
+  - [1.5 跨文对照：Loop 的合法性（01 vs 02 vs 03）](#15-跨文对照loop-的合法性01-vs-02-vs-03)
+  - [1.6 反思：Loop 不是万能药](#16-反思loop-不是万能药)
+  - [1.7 六大组件（来自 `09-loop-engineering/01.context-looop-engineering.md:362-415`）](#17-六大组件)
+  - [1.8 因果链：四层 + 三件套 谁是谁的前提](#18-因果链四层--三件套-谁是谁的前提)
+  - [📋 面试卡片：概念层](#-面试卡片概念层)
+- [第二层 · 实现层：关键机制、跨文对照与最小工程](#第二层--实现层关键机制跨文对照与最小工程)
+  - [2.0 本章导引：符号表 · 双模式阅读 · 学习路径](#20-本章导引符号表--双模式阅读--学习路径)
+  - [2.1 三件套：Trigger · Action · Stop（来自 `09-loop-engineering/03.loop-engineering.md:11-18`）](#21-三件套trigger--action--stop)
+  - [2.2 两根柱子：Goal + Verification（来自 `09-loop-engineering/03.loop-engineering.md:21-50`）](#22-两根柱子goal--verification)
+  - [2.3 最小工作单元：Reason → Act → Observe（来自 `09-loop-engineering/03.loop-engineering.md:147-187`）](#23-最小工作单元reason--act--observe)
+  - [2.4 形态选择：Solo / Maker-Checker / Manager+Helpers（来自 `09-loop-engineering/03.loop-engineering.md:189-225`）](#24-形态选择solo--maker-checker--managerhelpers)
+  - [2.5 跨文对照：关键机制的统一表](#25-跨文对照关键机制的统一表)
+  - [2.6 最小可运行示意（综合 02 + 03 的伪代码）](#26-最小可运行示意综合-02--03-的伪代码)
+  - [2.7 Stop Condition 三种写法（来自 `09-loop-engineering/03.loop-engineering.md:229-303`）](#27-stop-condition-三种写法)
+  - [2.8 参数速查表（综合三文的经验区间）](#28-参数速查表综合三文的经验区间)
+  - [2.9 三文都强调的"Loop 候选任务"信号清单](#29-三文都强调的loop-候选任务信号清单)
+  - [📋 面试卡片：实现层](#-面试卡片实现层)
+- [第三层 · 工程层：决策、避坑与场景](#第三层--工程层决策避坑与场景)
+  - [3.1 决策树：什么时候该上 Loop？](#31-决策树什么时候该上-loop)
+  - [3.2 形态选型建议（4 类场景）](#32-形态选型建议4-类场景)
+  - [3.3 常见错误与避坑清单（≥10 条）](#33-常见错误与避坑清单-10-条)
+  - [3.4 Loop 跑能上限（来自 `09-loop-engineering/03.loop-engineering.md:350-358`）](#34-loop-跑能上限)
+  - [3.5 何时不上 Loop（来自 `09-loop-engineering/03.loop-engineering.md:53-97`）](#35-何时不上-loop)
+  - [3.6 三文共同的"上 Loop 清单"汇总](#36-三文共同的上-loop-清单汇总)
+  - [📋 面试卡片：工程层](#-面试卡片工程层)
+- [三文冲突与我的判断](#三文冲突与我的判断)
+- [📇 5 分钟速查卡（可打印）](#-5-分钟速查卡可打印)
+- [参考与后续动作](#参考与后续动作)
+- [附录 A：面试常见追问 5 题](#附录-a面试常见追问-5-题综合三文答法)
+- [附录 B：诚实清单](#附录-b诚实清单仅来自三文未引入外部细节)
+- [附录 C：中英对照术语表](#附录-c中英对照术语表)
+
+---
+
+## 0. 前言：为什么 Loop Engineering 是"缺失的一环"
+
+### 痛点：人成了自己系统的瓶颈
+
+跑过几次 Agent 项目你就会发现：**真正慢的不是模型，是人。** 模型推理几秒出结果，devoting 重启、回滚、debug、按 prometheus 查指标、逐行 review——**人**才是串行回路里最慢的一节。当项目从"一次性 demo"进入"持续维护"阶段，每天凌晨 3 点的 bug 工单、每小时刷新的比分数据，**让人来当 cron** 这件事本身就是系统性的失败。
+
+`09-loop-engineering/01.context-looop-engineering.md:7` 把这层"缺失的一环"挑明：**下层不消失，上层叠加上去。** Loop 之所以独立成层，不是因为它时髦，而是因为"人在充当 cron"这件事已经成了能力边界外扩时的结构性瓶颈。
+
+| 没有 Loop 的后果 | 有 Loop 的能力 |
+|------------------|----------------|
+| 比赛数据每小时过期，靠人手动 prompt 更新 | Trigger 定时拉取 + Solo Loop 自动同步 |
+| Bug 工单凌晨涌入，靠人醒着盯 | 事件触发 + Maker–Checker 自动排查修复 |
+| 几百 commit 后跟不上自己系统在做什么 | Skills 沉淀 + Logging 审计 |
+| Loop 跑了几小时却没进展，靠人肉重启 | Hard Stop + 进度停滞判断自动停 |
+| 自评自嗨、自评偏差没人发现 | Independent Verifier / Separate Checker |
+| 跨 run 记忆丢光，每轮从零学 | Memory / State 落磁盘（Markdown/Linear/Board） |
+
+> **没有 Loop 这一层，前面所有层（Prompt / Context / Harness）再好也只能解决"一次性交付"——"持续运转"必须把"下一轮谁来开启"工程化。**
+
+### Loop 没装护栏的典型翻车场景
+
+```
+Loop 启动
+  │
+  ├── ❌ 翻车 1：种子 Prompt 模糊
+  │     └── "做一个好看的页面" → 自信地朝错误方向反复猜测
+  │
+  ├── ❌ 翻车 2：没有 Hard Stop
+  │     └── 迭代 200 轮还在改，烧光预算，token 钱包出洞
+  │
+  ├── ❌ 翻车 3：自评自嗨（写 ≠ 验）
+  │     └── Maker 自己给自己的代码打分，永远 100 分
+  │
+  ├── ❌ 翻车 4：跨 run 记忆丢光
+  │     └── 每轮从零学项目约定，Skill 无法复利
+  │
+  └── ❌ 翻车 5：Orchestration Tax 失守
+        └── 几百个 Agent 并行，你跟不上自己在做什么
+```
+
+### 本篇能给你什么
+
+按「**概念层 → 实现层 → 工程层**」三层递进，把三文压缩成面试能讲出来的架构语言——
+
+- **概念层**：四层演进（Prompt→Context→Harness→Loop）+ Loop 的合法性 + 六大组件
+- **实现层**：三件套 / 两根柱子 / 最小工作单元 / 三种形态 / 跨文对照
+- **工程层**：决策树 / 避坑清单 / 形态选型 / 何时不上
+
+每层末尾 5–10 张面试卡片，末尾 5 分钟速查卡可打印带去面试。
 
 ---
 
@@ -85,9 +187,22 @@ while+model → ReAct     → AutoGPT     → 纪律型 Loop
 
 ## 第一层 · 概念层：四层演进与 Loop 的位置
 
-### 1.1 四层"叠环"模型（来自 01 §1）
+> **统一类比：餐厅运营升级。**
+>
+> 用一家餐厅的运营升级来贯穿全文——
+>
+> | 餐厅角色 | 对应层级 | 谁负责 |
+> |---------|----------|--------|
+> | 服务员记住你的忌口 | **Prompt** | 人一次提醒 |
+> | 服务员自己去厨房问、配菜 | **Context** | Agent 自主调用 |
+> | 餐厅经理拆桌位、盯流程 | **Harness** | 外置系统管理 |
+> | 店长看营业数据决定明天要不要继续开业 | **Loop** | 调度与状态驱动 |
+>
+> 这个类比会反复回扣：上下文膨胀≈后厨传单堆满、咖啡杯满了；Verification≈品控员≠主厨；Orchestration Tax≈老板自己也吃不完几百桌菜；Hard Stop≈关门打烊时间。
 
-工程范式在每一层能力边界外扩时，把上一层补不上的缺口工程化。**下层不消失，上层叠加上去。**
+### 1.1 四层"叠环"模型（来自 `09-loop-engineering/01.context-looop-engineering.md:5-12`）
+
+工程范式在每一层能力边界外扩时，把上一层补不上的缺口工程化。**下层不消失，上层叠加上去。**（餐厅升级：服务员→配菜员→经理→店长，下一棒补上一棒的缺口。）
 
 | 层级 | 解决什么 | 谁发起下一轮 | 留下的缺口（催生下一层） |
 |------|----------|--------------|----------------------------|
@@ -177,6 +292,40 @@ while+model → ReAct     → AutoGPT     → 纪律型 Loop
 
 > 六个组件不是"必须全装"，是 Loop 工程的横切配方。**面试时按编号 1→6 报一遍**，比"循环组件化"这种空话有说服力得多。
 
+### 1.8 因果链：四层 + 三件套 谁是谁的前提
+
+（餐厅升级版：服务员→配菜员→经理→店长，每上一层都是因为下一层的某件事"忙不过来"。）
+
+```
+[Prompt]  模型会说人话
+   │  但 上下文大多空着
+   ▼
+[Context]  Agent 自己捞信息
+   │  但 长任务（≈5–10 分钟）上下文见底；自摘要会泄漏
+   ▼
+[Harness]  外置任务队列 + Runtime
+   │  但 仍要人不断发起下一轮（人在充当 cron）
+   ▼
+[Loop]  调度 / 状态 / 验证 决定下一轮是否开启
+   │
+   ▼
+三件套依赖关系：
+   Trigger  ─┐
+              ├─▶  Action ──▶  Stop Condition
+   Action   ──┘           （不可绕开 Stop，否则是无限循环）
+   Verification 是 Stop 是否可信的前提（不可绕）
+```
+
+| 因果链 | 谁是谁的前提 | 餐厅类比 |
+|--------|--------------|----------|
+| Prompt → Context | 没角色约束，Agent 不知如何装上下文 | 服务员不记忌口，配菜员无从下手 |
+| Context → Harness | 工具环内上下文见底，必须外置任务 | 后厨传单堆满，必须经理拆桌位 |
+| Harness → Loop | 任务拆完了，但"下一轮谁开启"还得靠人 | 经理盯完流程，店长才能决定明天开不开 |
+| Trigger / Action / Stop 三件套 | Stop 不可绕开；Verification 是 Stop 可信的前提 | 没有打烊时间 = 24h 餐厅；品控不可省 = 关门也要品控 |
+| Goal → Verification | 目标越客观，Verification 才有可能 | "做完了"标准不清，品控员也没法判 |
+
+> **面试要点**：被问"为什么 Loop 必须有 Stop"时，按这条因果链讲——Trigger/Action 都可省，**Stop 不可省**，没有 Stop 的 Loop 是没关门的餐厅。Verification 是 Stop 可信的前提，没有独立 Verification 的 Stop 只是空话。
+
 ### 📋 面试卡片：概念层
 
 **Q1**：Prompt / Context / Harness / Loop 四层的关系是什么？
@@ -197,6 +346,47 @@ while+model → ReAct     → AutoGPT     → 纪律型 Loop
 ---
 
 ## 第二层 · 实现层：关键机制、跨文对照与最小工程
+
+### 2.0 本章导引：符号表 · 双模式阅读 · 学习路径
+
+#### 2.0.1 符号表
+
+| 符号 / 缩写 | 含义 | 出处 |
+|-------------|------|------|
+| **Loop** | 自我发起下一轮的 Agentic 循环 | 综合三文 |
+| **Trigger** | 触发器（定时 / 事件 / 状态） | `09-loop-engineering/03.loop-engineering.md:11-18` |
+| **Action** | Loop 主体动作（含 Reason→Act→Observe） | `09-loop-engineering/03.loop-engineering.md:147-187` |
+| **Stop Condition** | 何时停（Metric=Result / 硬顶 / 主观停） | `09-loop-engineering/02.loop-engineering.md:78` `09-loop-engineering/03.loop-engineering.md:11-18` |
+| **Goal** | 目标（尽量客观） | `09-loop-engineering/03.loop-engineering.md:21-50` |
+| **Verification** | 独立验证（Maker≠Checker） | `09-loop-engineering/02.loop-engineering.md:240-274` `09-loop-engineering/03.loop-engineering.md:21-50` |
+| **ReAct** | Reason → Act → Observe 最小工作单元 | `09-loop-engineering/03.loop-engineering.md:147-187` |
+| **Orchestration Tax** | 并行的天花板是 review bandwidth | `09-loop-engineering/02.loop-engineering.md:277-323` |
+| **Hard Stop** | 硬顶迭代/时间/花费，防止空转 | `09-loop-engineering/02.loop-engineering.md:368-386` `09-loop-engineering/03.loop-engineering.md:339-358` |
+| **Skills** | 用 SKILL.md 固化项目知识，复利 | `09-loop-engineering/02.loop-engineering.md:389-416` |
+| **Worktrees** | 隔离副本，并行 Agent 不撞文件 | `09-loop-engineering/02.loop-engineering.md:228-237` |
+| **Solo / Maker-Checker / Manager+Helpers** | 三种 Loop 形态 | `09-loop-engineering/03.loop-engineering.md:189-225` |
+| **Six Components** | Automations / Worktrees / Skills / Plugins / Sub-agents / Memory | `09-loop-engineering/01.context-looop-engineering.md:362-415` |
+| `state` | Loop 状态字典（done / tries / best_score / log） | 本页伪代码（综合 02/03） |
+| `metric = result` | 客观硬停形式（最推荐） | `09-loop-engineering/03.loop-engineering.md:301-303` |
+
+#### 2.0.2 双模式阅读
+
+- **快速模式**（面试前 3 天）：只读每节表格 + 末尾面试卡片 + 速查卡——能把"为什么 Loop / Loop ≠ Cron / 三件套 / 两根柱子 / Orchestration Tax"讲清即够。
+- **深入模式**（真要搭 Loop）：跟着 §2.6 伪代码手推一遍；按 §2.7 三种 Stop 写法选一种；按 §3.6 清单逐项对账。
+
+#### 2.0.3 学习路径
+
+```mermaid
+graph TD
+  A["2.1 三件套 Trigger/Action/Stop"] --> B["2.2 两根柱子 Goal/Verification"]
+  B --> C["2.3 最小工作单元 Reason→Act→Observe"]
+  C --> D["2.4 三种形态 Solo/Maker-Checker/Manager+Helpers"]
+  D --> E["2.5 跨文对照关键机制"]
+  E --> F["2.6 最小可运行伪代码"]
+  F --> G["2.7 Stop Condition 三种写法"]
+  G --> H["2.8 参数速查表"]
+  H --> I["2.9 Loop 候选任务信号"]
+```
 
 ### 2.1 三件套：Trigger · Action · Stop（来自 03 §0）
 

@@ -58,3 +58,4 @@ _redact_secrets.py
 # Local scratch / generated reports
 .scratch-mem0/
 **/核验报告.txt
+**/合规审计报告.txt
