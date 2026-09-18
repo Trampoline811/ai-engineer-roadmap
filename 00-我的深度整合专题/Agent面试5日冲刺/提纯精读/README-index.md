@@ -43,7 +43,7 @@
 | `00-我的深度整合专题\循环工程深度解析\Loop_Engineering_Deep_Dive.md` | `09-loop-engineering\` 三文（484+445+424） | L4a | **D1** | ✅ 567 行（📍溯源节在 L11） |
 | `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` | `08-hermes-agent\09-lang-serial-not`、`01-arch`、`12-hermes-agent-small`、`13-pi-agent`、`14-deepseek-harness`、`11-langgraph\02` | L4 | **D4** | ✅ 199 行（回答"同层二选一 + 语言门槛"） |
 | `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | `05-model-route\` 11 模块 + `07-llm_from_scrach`（注意力/KV cache/MoE/GRPO） | L1 | **D3** | ✅ 就绪（623 行，首版 992 已压缩） |
-| `00-我的深度整合专题\运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md` | `11-langgraph`(3 项目) + `08-hermes-agent` + `12-hermes-agent-small` + `13-pi-agent` + `14-deepseek-harness` + `04-multiagent` | L4 | **D4** | ✅ 就绪（725 行） |
+| `00-我的深度整合专题\运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md` | `11-langgraph`(3 项目) + `08-hermes-agent` + `12-hermes-agent-small` + `13-pi-agent` + `14-deepseek-harness` + `04-multiagent` | L4 | **D4** | ✅ 就绪（616 行） |
 | `00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md` | `08-hermes-agent\03-eval` + `12-hermes-agent-small\waku\ops`+`evals` + `02-RAG\04_RAG_Evaluation` + `99-My idea\Agent eval` + `10-CICD` + `05-model-route` 07/08/09/11 | L5 | **D5** | ✅ 就绪（546 行） |
 
 ## 生产节奏（每日闭环的一部分）

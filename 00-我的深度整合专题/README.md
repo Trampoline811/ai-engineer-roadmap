@@ -73,7 +73,7 @@
 ### 4. 推理与路由深度解析（L1 · D3）
 
 **核心文档：**
-- `推理与路由深度解析\Model_Route_Deep_Dive.md`（400–600 行）- `05-model-route\` 11 个模块 + `07-llm_from_scrach` 概念
+- `推理与路由深度解析\Model_Route_Deep_Dive.md`（623 行）- `05-model-route\` 11 个模块 + `07-llm_from_scrach` 概念
 
 **特色内容：**
 - ✅ 路由/回退/熔断/缓存/计费/治理 11 个模块的机制与伪代码
@@ -85,8 +85,8 @@
 ### 5. 运行时选型深度解析（L4 · D4）
 
 **核心文档：**
-- `Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（199 行）- **选哪个**：同层二选一、Hermes 是什么、语言门槛、D4 入门路径
-- `运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md`（420–620 行）- **内部怎么实现**：五方对照 + "同一个循环，五种写法"
+- `Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（312 行）- **选哪个**：同层二选一、Hermes 是什么、语言门槛、D4 入门路径
+- `运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md`（616 行）- **内部怎么实现**：五方对照 + "同一个循环，五种写法"
 
 **特色内容：**
 - ✅ LangGraph / Hermes / waku / pi / DSH 五方横向对照（loop 出处到文件中行）
@@ -98,7 +98,7 @@
 ### 6. 观测与评测深度解析（L5 · D5）
 
 **核心文档：**
-- `观测与评测深度解析\Observability_Eval_Deep_Dive.md`（380–560 行）
+- `观测与评测深度解析\Observability_Eval_Deep_Dive.md`（546 行）
 
 **特色内容：**
 - ✅ 失败归因链（RAG→解析→记忆→mem0→工具→loop→模型→微调）
