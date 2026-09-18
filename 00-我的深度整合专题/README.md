@@ -8,7 +8,7 @@
 
 **核心文档：**
 - `RAG_Evaluation_Deep_Dive.md` (2,861行) - 完整的RAG评估体系
-- `RAG_Evaluation_Cheatsheet.ipynb` (768行) - 速查手册与实战代码
+- `RAG_Evaluation_Cheatsheet.ipynb`（原记载 768 行）- ⚠️ **2026-09-18 实测：该文件不在仓库中**，速查内容与实战代码目前内嵌在 `RAG_Evaluation_Deep_Dive.md` 里；引用时不要声称已有此 notebook
 
 **配套Notebooks：**
 - `01_context_precision_recall.ipynb` - Context Precision & Recall 完整实现
@@ -54,6 +54,74 @@
 - `03-memory/` 课程四篇核心 notebook
 - `99-My idea/` 设计笔记
 - `06-harnes/` 工程实践
+
+---
+
+### 3. 循环工程深度解析（L4a · D1）
+
+**核心文档：**
+- `循环工程深度解析\Loop_Engineering_Deep_Dive.md`（567 行）- `09-loop-engineering\` 三文（484+445+424）蒸馏
+
+**特色内容：**
+- ✅ 三文关系图（01 合法性/横切配方 → 02 护栏与真相 → 03 落地形态）——三文是**递进且互为前提**，不是并列
+- ✅ 四层演进：Prompt → Context → Harness → Loop
+- ✅ 三文冲突与我的判断（术语不同、结论一致：独立验证是 Loop 可信的核心）
+- ✅ 避坑清单 + 5 分钟速查卡 + 每层面试卡
+
+---
+
+### 4. 推理与路由深度解析（L1 · D3）
+
+**核心文档：**
+- `推理与路由深度解析\Model_Route_Deep_Dive.md`（400–600 行）- `05-model-route\` 11 个模块 + `07-llm_from_scrach` 概念
+
+**特色内容：**
+- ✅ 路由/回退/熔断/缓存/计费/治理 11 个模块的机制与伪代码
+- ✅ KV cache / MoE / GRPO 的"面试够用"解释
+- ✅ 成本治理三段式（before / during / after）+ 选型决策树
+
+---
+
+### 5. 运行时选型深度解析（L4 · D4）
+
+**核心文档：**
+- `Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（199 行）- **选哪个**：同层二选一、Hermes 是什么、语言门槛、D4 入门路径
+- `运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md`（420–620 行）- **内部怎么实现**：五方对照 + "同一个循环，五种写法"
+
+**特色内容：**
+- ✅ LangGraph / Hermes / waku / pi / DSH 五方横向对照（loop 出处到文件中行）
+- ✅ 为什么"编排库 + 成品 harness 被叠成两层"会导致 harness 重复建设（含作者 26:13 当场自纠的案例）
+- ✅ 多智能体：什么信号才该拆
+
+---
+
+### 6. 观测与评测深度解析（L5 · D5）
+
+**核心文档：**
+- `观测与评测深度解析\Observability_Eval_Deep_Dive.md`（380–560 行）
+
+**特色内容：**
+- ✅ 失败归因链（RAG→解析→记忆→mem0→工具→loop→模型→微调）
+- ✅ hermes invariants + trace RCA 与 waku tracing/judge/release_gate 两套实现对照
+- ✅ 评测进 CI：数据集 → 门禁阈值 → 回归 → trace 可观测
+- ✅ LLM-as-judge 三类偏差与缓解；护栏库 ≠ 安全策略
+
+---
+
+### 7. Agent 面试 5 日冲刺（计划与日卡 · 2026-09）
+
+**入口：** `Agent面试5日冲刺\README.md`（**六层栈 v2 总纲**）
+
+| 文件 | 内容 |
+|---|---|
+| `Agent面试5日冲刺\README.md` | 六层栈 L1-L6 总图、层×天映射、全仓覆盖矩阵、文件核验机制、决策记录 |
+| `Agent面试5日冲刺\day1-loop-harness.md` | D1（9/18）总纲 + L4a 循环与 Harness |
+| `Agent面试5日冲刺\day2-context.md` | D2（9/19）L2 上下文：记忆 + 知识 |
+| `Agent面试5日冲刺\day3-inference-tools.md` | D3（9/20）L1 推理 + L3 动作 |
+| `Agent面试5日冲刺\day4-runtime-multiagent.md` | D4（9/21）L4b 运行时选型 + 协同 |
+| `Agent面试5日冲刺\day5-observability-closeout.md` | D5（9/22）L5 观测 + L6 界面 + 收口 |
+| `Agent面试5日冲刺\核验脚本.py` | **路径真实性核验**：扫描全部 md 的反引号路径，报告 OK/OK~/AMBIG/PLANNED/MISS |
+| `Agent面试5日冲刺\提纯精读\README-index.md` | P 文档与模块专题的索引与规范 |
 
 ---
 

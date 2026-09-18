@@ -6,7 +6,7 @@
 ## 读法（按序，每步 ≤3min，别陷进去）
 
 1. **`README.md` 场景一**（"让 AI 真正记住你"）：五轨记忆 + 使用方式——2min 建立全貌。
-2. **`lib/store.js` 词表定位**（用 grep/read 只看这些行，其他跳过）：
+2. **`~/.dsh/profiles/web/node_modules/dsh-memory-evolve/lib/store.js` 词表定位**（用 grep/read 只看这些行，其他跳过）：
    - `ENTRY_DELIMITER` / `ENTRY_HEAD_RE`（L39/L138）：条目格式 = `§` 分隔 + `[日期]` + `[git 分支]` + `[id:xxxxxxxx]` —— **记忆是可 grep 的纯文本**。
    - `BRANCH_TAG_RE`（L79）+ `gitBranch()`（L485）：`[branch:xx]` 只在该 git 分支注入——分支隔离的落法。
    - `SUMMARY_TAG_RE` / `autoSummary`（L128/L160，80 字摘要）：**渐进式披露**的落法。
@@ -14,10 +14,10 @@
    - `withLock`（L387）+ stale lock（L352）：目录锁 + tmp+rename 原子写——并发安全。
    - `SuggestionQueue`（L1286）：SUGGESTIONS.jsonl = **人确认队列**本体。
    - `ArchiveStore`（L1349）：冷存储 + 可"移回主记忆"——淘汰机制。
-3. **`lib/index.js` 两个点**（grep "renderSnapshot"/"addOne"）：
+3. **`~/.dsh/profiles/web/node_modules/dsh-memory-evolve/lib/index.js` 两个点**（grep "renderSnapshot"/"addOne"）：
    - 快照注入策略：注入=全局 memory + user + 当前项目 KEY；**daily/project 永不注入**，只靠"每回合收尾写"duty + 看门狗。
    - `addOne` 里 key 写入 → `enqueueSuggestion`（进队列等你确认）；subagent 禁写全局轨。
-4. （可选）`src/client/MemoryQueueView.tsx`：你记忆页里"待确认"列表的前端。
+4. （可选）`~/.dsh/profiles/web/node_modules/dsh-memory-evolve/src/client/MemoryQueueView.tsx`：你记忆页里"待确认"列表的前端。
 
 ## 产出（3 行笔记，并入 D2 对照表 dsh-memory-evolve 列）
 

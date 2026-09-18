@@ -2858,4 +2858,4 @@ if __name__ == "__main__":
 
 > **一句话总结：这四个数字是你优化 RAG 的指南针——没有它们，你在黑暗中摸索。**
 
-> 配套代码见 `RAG_Evaluation_Cheatsheet.ipynb`
+> 配套代码见本文件内嵌代码块（⚠️ 原稿提到的 `RAG_Evaluation_Cheatsheet.ipynb` 当前不在仓库中，2026-09-18 核验）

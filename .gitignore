@@ -54,3 +54,7 @@ _redact_secrets.py
 
 # MemSearch plugin data
 .memsearch/
+
+# Local scratch / generated reports
+.scratch-mem0/
+**/核验报告.txt
