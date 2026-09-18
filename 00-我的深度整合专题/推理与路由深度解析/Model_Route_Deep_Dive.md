@@ -618,6 +618,6 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 ## 附录 B：诚实清单
 
 - **(推断)** 全篇约 20 处，凡决策树、避坑 3/4/6/7/8/9/11/15、3.3 before 拒答等"生产应做但仓库未实现"的部分都标了 (推断)；**所有真实路径都已通过仓库核验**。
-- **重复**：`05-model-route\11\governance\` 三段式 + `05-model-route\02+05+06` 成本三段式是同一模式复用，仓库自身在示范"横切关注点都走 before/during/after"。
+- **重复**：模块 11 的三段式（`05-model-route\11\governance\`）与模块 02/05/06 组合出的成本三段式是同一模式复用，仓库自身在示范"横切关注点都走 before/during/after"。
 - **轻微冗余**：`05-model-route\02\cache\exact_cache.py`（SHA256）与 `05-model-route\10\cache\exact.py`（字符串拼）演示了两种键方案，真用应统一为 SHA256。
 - **仓库自身缺口**：`01` 无异常分类 / `02` 无 TTL / `10` 无 tenant 隔离——三处生产必做护栏仓库都"留接入点 + 注释生产应做"。
