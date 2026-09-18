@@ -13,7 +13,7 @@
 | 路径 | 状态 | 行数/大小 | 备注 |
 |---|:--:|---|---|
 | `00-我的深度整合专题\Agent面试5日冲刺\README.md` | ✅ | 250+ | v2 六层栈版总纲 |
-| `00-我的深度整合专题\循环工程深度解析\Loop_Engineering_Deep_Dive.md` | 🆕 今日生成 | 420-620 | 三文蒸馏；若打开时还没生成，先读源文 01 |
+| `00-我的深度整合专题\循环工程深度解析\Loop_Engineering_Deep_Dive.md` | ✅ 已就绪 | 567 | 三文蒸馏；若打开时还没生成，先读源文 01 |
 | `09-loop-engineering\01.context-looop-engineering.md` | ✅ | 484 | ⚠️ 文件名拼写 **looop**（三个 o） |
 | `09-loop-engineering\02.loop-engineering.md` | ✅ | 445 | |
 | `09-loop-engineering\03.loop-engineering.md` | ✅ | 424 | |

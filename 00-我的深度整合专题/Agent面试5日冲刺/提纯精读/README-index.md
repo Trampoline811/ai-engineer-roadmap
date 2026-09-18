@@ -31,7 +31,7 @@
 |---|---|:--:|:--:|---|
 | `P1a-循环与五范式提纯.md` | 09-loop 三文 + 01-Agent 六范式 + ReAct 代码结构 | L4a | D1 | ✅ 460 行（含📍溯源节） |
 | `P1b-Harness生命周期提纯.md` | learn-claude-code s01-s20 重组为会话生命周期 | L4a | D1 | ✅ 425 行（含📍溯源节） |
-| `P2-记忆实现对照提纯.md` | 03-memory 四本 + harness s08/s09 + hermes 四层与 provider + waku 四层/gate + pi 会话树 + LangGraph checkpoint + mem0 + dsh-memory-evolve **跨系统对照表** | L2 | **D2** | 🆕 生成中（320–480 行） |
+| `P2-记忆实现对照提纯.md` | 03-memory 四本 + harness s08/s09 + hermes 四层与 provider + waku 四层/gate + pi 会话树 + LangGraph checkpoint + mem0 + dsh-memory-evolve **跨系统对照表** | L2 | **D2** | ✅ 就绪（572 行） |
 | `P3-RAG主线提纯.md` | 02-RAG simple/basic/high_level 五范式 + Agentic RAG + 幻觉治理（评测复用 RAG 评估专题） | L2 | **D2** | 待产（D2 白天直接用模块专题替代，P3 可视时间降级为可选） |
 | `P4-多智能体与框架提纯.md` | multi-agent 模式 + 框架选型矩阵 + runtime 对照 | L4b | **D4** | 待产（已被 `Runtime_Five_Way_Deep_Dive.md` 大量覆盖，剩余部分并入 D4 产出区） |
 | `P5-评测CICD概念提纯.md` | Agent eval + CICD 突击 + LLM 概念卡 + model-route | L5 | **D5** | 待产（评测部分已由 `Observability_Eval_Deep_Dive.md` 承担） |
@@ -42,9 +42,9 @@
 |---|---|:--:|:--:|---|
 | `00-我的深度整合专题\循环工程深度解析\Loop_Engineering_Deep_Dive.md` | `09-loop-engineering\` 三文（484+445+424） | L4a | **D1** | ✅ 567 行（📍溯源节在 L11） |
 | `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` | `08-hermes-agent\09-lang-serial-not`、`01-arch`、`12-hermes-agent-small`、`13-pi-agent`、`14-deepseek-harness`、`11-langgraph\02` | L4 | **D4** | ✅ 199 行（回答"同层二选一 + 语言门槛"） |
-| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | `05-model-route\` 11 模块 + `07-llm_from_scrach`（注意力/KV cache/MoE/GRPO） | L1 | **D3** | 🆕 生成中（400–600 行） |
-| `00-我的深度整合专题\运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md` | `11-langgraph`(3 项目) + `08-hermes-agent` + `12-hermes-agent-small` + `13-pi-agent` + `14-deepseek-harness` + `04-multiagent` | L4 | **D4** | 🆕 生成中（420–620 行） |
-| `00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md` | `08-hermes-agent\03-eval` + `12-hermes-agent-small\waku\ops`+`evals` + `02-RAG\04_RAG_Evaluation` + `99-My idea\Agent eval` + `10-CICD` + `05-model-route` 07/08/09/11 | L5 | **D5** | 🆕 生成中（380–560 行） |
+| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | `05-model-route\` 11 模块 + `07-llm_from_scrach`（注意力/KV cache/MoE/GRPO） | L1 | **D3** | ✅ 就绪（623 行，首版 992 已压缩） |
+| `00-我的深度整合专题\运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md` | `11-langgraph`(3 项目) + `08-hermes-agent` + `12-hermes-agent-small` + `13-pi-agent` + `14-deepseek-harness` + `04-multiagent` | L4 | **D4** | ✅ 就绪（725 行） |
+| `00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md` | `08-hermes-agent\03-eval` + `12-hermes-agent-small\waku\ops`+`evals` + `02-RAG\04_RAG_Evaluation` + `99-My idea\Agent eval` + `10-CICD` + `05-model-route` 07/08/09/11 | L5 | **D5** | ✅ 就绪（546 行） |
 
 ## 生产节奏（每日闭环的一部分）
 

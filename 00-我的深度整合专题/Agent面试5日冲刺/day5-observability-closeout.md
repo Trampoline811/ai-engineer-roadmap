@@ -10,7 +10,7 @@
 
 | 路径 | 状态 | 行数/大小 |
 |---|:--:|---|
-| `00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md` | 🆕 今日生成 | 380–560 |
+| `00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md` | ✅ 已就绪 | 546 |
 | `99-My idea\Agent eval\01-eval.md` | ✅ | 267（四维：Capability / Reliability / Cost / Safety） |
 | `08-hermes-agent\03-eval\README.md` | ✅ | 228 |
 | `08-hermes-agent\03-eval\notes\02_logging_trace.md` / `03_eval_harness.md` | ✅ | 229 / 283 |
@@ -48,6 +48,18 @@
 | 16:00-16:45 | **L6 界面** | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend\hitl.py` + `11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend\chat.py`（流式 + 人审按钮）；`12-hermes-agent-small\waku\gateway\cli.py` + `12-hermes-agent-small\waku\gateway\telegram.py` + `12-hermes-agent-small\waku\gateway\voice.py`（多通道入口） | L6 一句话 + 界面原则卡 |
 | 16:45-17:45 | **总收口 A** | 合并 5 天全部图/表 → **《面试总纲 v1》**：三条主线口述稿（一条消息的一生 / 记忆与上下文 / RAG 与评测）+ 两张王牌表（记忆对照表、框架选型矩阵）+ **六层栈逐层答法**；挑 2-3 个**真正跑通**的 demo 写成项目叙事 | 面试总纲 v1 |
 | 19:30-21:00 | **总演练** | **模拟面试 60–75min**（自问自答/录音）+ 5 分钟速查卡通背 + 薄弱点清单 | 模拟记录 + D6+ 清单 |
+
+---
+
+## ⚔️ 写码挑战⑤（30min，白板/口述版 —— 5 天阶梯的最后一级）
+
+闭卷、不看代码，在纸上/白板画出并**录音 3 分钟**讲清以下任意一项：
+
+1. **一条消息的一生**：L6 界面进来 → L4 组装与循环 → L1 调用 → L3 工具 → L2 注入 → L5 落盘，标出每层挂在哪个文件；
+2. **最小 harness 的 5 件**（循环 / 状态 / 工具 / 停机 / 人审）在 LangGraph 与 Hermes 里分别由谁提供；
+3. **失败归因链 8 步** + 每步你用什么观测手段。
+
+**判据**：能不看笔记说出**文件路径**（至少到目录级），说明这 5 天读的是真代码而不是概念；说不出就回对应 day 卡的核验表补。
 
 ---
 

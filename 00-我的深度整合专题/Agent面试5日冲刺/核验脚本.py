@@ -55,21 +55,15 @@ EXTRA_SKIP = [
     'APPEND_SYSTEM.md', 'SYSTEM.md',     # Pi 上游的 prompt 文件名（本仓库不含 Pi 源码）
     'store.js', 'index.js',              # dsh-memory-evolve 插件源码（在 ~/.dsh 下，仓库外）
     'mem0/configs/prompts.py', 'mem0/utils/entity_extraction.py',   # mem0 上游源码（仓库外）
+    'mem0/main.py',                                                  # mem0 上游入口（仓库外）
     '_incoming/SKILL.md',
 ]
 
 # 计划产出物（尚未创建，白名单）——basename 匹配
 PLANNED = {
-    'P2-记忆实现对照提纯.md',
-    'P3-RAG主线提纯.md',
+    'P3-RAG主线提纯.md',          # 已由模块专题覆盖，视时间决定是否再产
     'P4-多智能体与框架提纯.md',
     'P5-评测CICD概念提纯.md',
-    'Model_Route_Deep_Dive.md',
-    'Observability_Eval_Deep_Dive.md',
-    'Runtime_Five_Way_Deep_Dive.md',
-    '推理与路由深度解析',
-    '观测与评测深度解析',
-    '运行时选型深度解析',
 }
 
 # 形如命令行的引用（pip install / python xxx.py / uv venv …）不校验
@@ -155,12 +149,11 @@ def check(ref, md_path):
     s = re.sub(r':\s*§?\s*\d+(?:[.\-–~/]\d+)*$', '', s).strip()
     low = s.lower()
     base_name = os.path.basename(s.rstrip('\\/'))
-    if base_name in PLANNED:
-        return 'PLANNED', '计划产出物', []
+    planned = base_name in PLANNED
 
     cands = []
 
-    # 1) 精确：仓库根 / 本 md 所在目录 / 冲刺目录
+    # 1) 精确：仓库根 / 本 md 所在目录 / 冲刺目录（先判存在，再判"计划产出物"）
     for base, label in ((ROOT, 'root'), (os.path.dirname(md_path), 'same-dir'), (HERE, 'sprint')):
         p = os.path.join(base, s.replace('/', os.sep))
         if os.path.exists(p):
@@ -179,6 +172,8 @@ def check(ref, md_path):
         return 'OK~', f'后缀唯一命中: {cands[0]}', cands
     if len(cands) > 1:
         return 'AMBIG', f'{len(cands)} 处命中', cands[:6]
+    if planned:
+        return 'PLANNED', '计划产出物（尚未创建）', []
     # 4) 多文件简写（如 s01/s03/s08、09-loop-engineering/02、08/12）：不是单一路径引用
     if re.fullmatch(r'[0-9A-Za-z_\-\u4e00-\u9fff]+(?:[/\\][0-9A-Za-z_\-\u4e00-\u9fff]+)+', s) \
             and os.path.splitext(s)[1].lower() not in VALID_EXT:

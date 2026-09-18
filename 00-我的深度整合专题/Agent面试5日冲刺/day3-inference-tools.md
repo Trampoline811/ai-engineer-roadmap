@@ -11,7 +11,7 @@
 
 | 路径 | 状态 | 行数/大小 |
 |---|:--:|---|
-| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | 🆕 今日生成 | 400–600 |
+| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | ✅ 已就绪 | 623 |
 | `05-model-route\README.md` | ✅ | 52（**自带"面试清单→代码映射"，先读它**） |
 | `05-model-route\01\main.py` + `01\breaker\circuit_breaker.py` | ✅ | 60 / 61 |
 | `05-model-route\02\main.py` + `02\cache\exact_cache.py` | ✅ | 55 / 19 |

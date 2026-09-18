@@ -11,7 +11,7 @@
 | 路径 | 状态 | 行数/大小 |
 |---|:--:|---|
 | `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` | ✅ | 199 |
-| `00-我的深度整合专题\运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md` | 🆕 今日生成 | 420–620 |
+| `00-我的深度整合专题\运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md` | ✅ 已就绪 | 725 |
 | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\README.md` | ✅ | 357（**最贴本机环境，可试跑**） |
 | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py` | ✅ | 80 |
 | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py` | ✅ | 10 |

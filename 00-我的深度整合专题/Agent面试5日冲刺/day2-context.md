@@ -12,7 +12,7 @@
 
 | 路径 | 状态 | 行数/大小 |
 |---|:--:|---|
-| `00-我的深度整合专题\Agent面试5日冲刺\提纯精读\P2-记忆实现对照提纯.md` | 🆕 今日生成 | 320–480 |
+| `00-我的深度整合专题\Agent面试5日冲刺\提纯精读\P2-记忆实现对照提纯.md` | ✅ 已就绪 | 572 |
 | `03-memory\04_three_factor_scoring.ipynb` | ✅ | 16.3 KB（**纯 stdlib，可离线**） |
 | `03-memory\02_long_term_memory.ipynb` | ✅ | 34.4 KB（mock 向量可离线） |
 | `03-memory\01-windowed_memory.ipynb` / `03_summary_memory.ipynb` | ✅ | 13.3 KB / 26.9 KB |
