@@ -67,20 +67,20 @@
 
 ### 痛点：人成了自己系统的瓶颈
 
-跑过几次 Agent 项目你就会发现：**真正慢的不是模型，是人。** 模型推理几秒出结果，devoting 重启、回滚、debug、按 prometheus 查指标、逐行 review——**人**才是串行回路里最慢的一节。当项目从"一次性 demo"进入"持续维护"阶段，每天凌晨 3 点的 bug 工单、每小时刷新的比分数据，**让人来当 cron** 这件事本身就是系统性的失败。
+跑过几次 Agent 项目你就会发现：**真正慢的不是模型，是人。** 模型推理几秒出结果，而重启、回滚、debug（调试）、按 prometheus（监控指标系统）查指标、逐行 review（代码评审）——**人**才是串行回路里最慢的一节。当项目从"一次性 demo（演示原型）"进入"持续维护"阶段，每天凌晨 3 点的 bug 工单、每小时刷新的比分数据，**让人来当 cron（定时任务）** 这件事本身就是系统性的失败。
 
 `09-loop-engineering/01.context-looop-engineering.md:7` 把这层"缺失的一环"挑明：**下层不消失，上层叠加上去。** Loop 之所以独立成层，不是因为它时髦，而是因为"人在充当 cron"这件事已经成了能力边界外扩时的结构性瓶颈。
 
 | 没有 Loop 的后果 | 有 Loop 的能力 |
 |------------------|----------------|
-| 比赛数据每小时过期，靠人手动 prompt 更新 | Trigger 定时拉取 + Solo Loop 自动同步 |
-| Bug 工单凌晨涌入，靠人醒着盯 | 事件触发 + Maker–Checker 自动排查修复 |
-| 几百 commit 后跟不上自己系统在做什么 | Skills 沉淀 + Logging 审计 |
-| Loop 跑了几小时却没进展，靠人肉重启 | Hard Stop + 进度停滞判断自动停 |
-| 自评自嗨、自评偏差没人发现 | Independent Verifier / Separate Checker |
-| 跨 run 记忆丢光，每轮从零学 | Memory / State 落磁盘（Markdown/Linear/Board） |
+| 比赛数据每小时过期，靠人手动 prompt（提示词）更新 | Trigger（触发器）定时拉取 + Solo Loop（单代理循环）自动同步 |
+| Bug（缺陷）工单凌晨涌入，靠人醒着盯 | 事件触发 + Maker–Checker（做—验分离）自动排查修复 |
+| 几百 commit（代码提交）后跟不上自己系统在做什么 | Skills（技能沉淀）+ Logging（日志）审计 |
+| Loop 跑了几小时却没进展，靠人肉重启 | Hard Stop（硬停机）+ 进度停滞判断自动停 |
+| 自评自嗨、自评偏差没人发现 | Independent Verifier / Separate Checker（独立验收人：干活的 ≠ 验收的） |
+| 跨 run（运行）记忆丢光，每轮从零学 | Memory / State（记忆 / 状态）落磁盘（Markdown 文件 / Linear 工单板 / Board 看板） |
 
-> **没有 Loop 这一层，前面所有层（Prompt / Context / Harness）再好也只能解决"一次性交付"——"持续运转"必须把"下一轮谁来开启"工程化。**
+> **没有 Loop 这一层，前面所有层（Prompt（提示词层） / Context（上下文层） / Harness）再好也只能解决"一次性交付"——"持续运转"必须把"下一轮谁来开启"工程化。**
 
 ### Loop 没装护栏的典型翻车场景
 
@@ -107,7 +107,7 @@ Loop 启动
 
 按「**概念层 → 实现层 → 工程层**」三层递进，把三文压缩成面试能讲出来的架构语言——
 
-- **概念层**：四层演进（Prompt→Context→Harness→Loop）+ Loop 的合法性 + 六大组件
+- **概念层**：四层演进（Prompt→Context（上下文层）→Harness（外壳层）→Loop）+ Loop 的合法性 + 六大组件
 - **实现层**：三件套 / 两根柱子 / 最小工作单元 / 三种形态 / 跨文对照
 - **工程层**：决策树 / 避坑清单 / 形态选型 / 何时不上
 
@@ -121,19 +121,19 @@ Loop 启动
 
 ### a) 在计划中的位置
 
-本页服务于 **5 日冲刺 D1** 的 **「09:00–11:00 概念 M」** 时间盒，对应**六层栈的 L4 运行时（loop / harness 内核）**。在 D4 会与 LangGraph（确定性图编排）/ Hermes（记忆持久化）做对照收口，在 D5 与 CI/CD / 评测闭环。
+本页服务于 **5 日冲刺 D1** 的 **「09:00–11:00 概念 M」** 时间盒，对应**六层栈的 L4 运行时（loop / harness（外壳层） 内核）**。在 D4 会与 LangGraph（确定性图编排）/ Hermes（记忆持久化）做对照收口，在 D5 与 CI/CD / 评测闭环。
 
 ### b) 被蒸馏源明细
 
 | # | 源文件 | 行数 | 主旨（真读后概括） |
 |---|--------|------|--------------------|
 | 01 | `09-loop-engineering/01.context-looop-engineering.md`（注意文件名是 looop 三个 o，原样保留） | 484 | **四层演进**：Prompt → Context → Harness → Loop；每一层补上一层的缺口；提出 Addy Osmani 的六大组件（Automations · Worktrees · Skills · Plugins · Sub-agents · Memory）作为配方 |
-| 02 | `09-loop-engineering/02.loop-engineering.md` | 445 | **Loop 的定义、护栏与陷阱**：Loop = Cron + decision maker in the body；强调 Verification、Orchestration Tax、种子 Prompt、硬停与花费上限、Skill 复利 |
-| 03 | `09-loop-engineering/03.loop-engineering.md` | 424 | **澄清与落地形态**：Trigger + Action + Stop Condition 三件套；Goal + Verification 两根柱子；Reason → Act → Observe 最小工作单元；Solo/Maker-Checker/Manager+Helpers 三种形态；按场景判断，不跟风上舰队 |
+| 02 | `09-loop-engineering/02.loop-engineering.md` | 445 | **Loop 的定义、护栏与陷阱**：Loop = Cron + decision maker in the body（体内决策体）；强调 Verification（验收）、Orchestration Tax、种子 Prompt、硬停与花费上限、Skill 复利 |
+| 03 | `09-loop-engineering/03.loop-engineering.md` | 424 | **澄清与落地形态**：Trigger + Action（动作） + Stop Condition（停机条件） 三件套；Goal + Verification 两根柱子；Reason → Act → Observe 最小工作单元；Solo/Maker-Checker/Manager+Helpers 三种形态；按场景判断，不跟风上舰队 |
 
 ### c) 蒸馏理由与方法
 
-三文是同一主题的三次递进：01 把 Loop 放进「为什么需要新一层」的大图（概念合法性），02 给 Loop 的工程护栏与成本真相（工程护栏），03 把模糊叙事压到「Trigger/Action/Stop + Goal/Verification + 形态选择」（落地形态）。合并理由：单看任一篇都会被另两篇补上的关键护栏漏掉；分开看又会重复同一概念（如 Verification、Stop Condition）。方法：**按"命题 → 机制 → 工程后果"重排，跨文对齐同一概念、显式化冲突点**。所有内容均来自上述三文，未引入外部框架细节。
+三文是同一主题的三次递进：01 把 Loop 放进「为什么需要新一层」的大图（概念合法性），02 给 Loop 的工程护栏与成本真相（工程护栏），03 把模糊叙事压到「Trigger/Action/Stop + Goal/Verification + 形态选择」（落地形态）。合并理由：单看任一篇都会被另两篇补上的关键护栏漏掉；分开看又会重复同一概念（如 Verification、Stop Condition（停机条件））。方法：**按"命题 → 机制 → 工程后果"重排，跨文对齐同一概念、显式化冲突点**。所有内容均来自上述三文，未引入外部框架细节。
 
 ---
 
@@ -169,7 +169,7 @@ Loop 启动
 | # | 这篇在回答什么问题（人话） | 它反复强调的那个词 → 一句人话 | 你能直接拿走的东西 | 它的语气 |
 |---|---|---|---|---|
 | **01** | **为什么需要 loop 这一层？** 从"会写提示词"到"会管循环"，中间补了几层？ | **四层叠环**：Prompt（会说话）→ Context（会自己找资料）→ Harness（会拆活、会管运行环境）→ Loop（连"何时再跑一轮"也自动化）；**每加一层，都是因为上一层留了坑** | **一份零件清单**：六大组件 = Automations（定时触发）/ Worktrees（隔离工作区）/ Skills（知识写进 SKILL.md）/ Plugins & Connectors（MCP / API）/ Sub-agents（干的人 ≠ 验的人）/ Memory & State（磁盘上的进度） | 讲"为什么" |
-| **02** | **真跑起来会怎么亏、怎么失控？** | **Orchestration Tax（编排税）**：你能同时管几个 agent，不由工具决定，**由你 review 的精力决定**；真吞吐 ≈ min(工具能并行几个，你能看几个)。另附标志性定义：**Loop = Cron + 决策体** | **四个刹车**：独立验收 Verification / 硬停机 Hard Stop / 花费上限 / Memory 落盘（跨次运行不丢）；外加外围零件（Worktrees、Skills、Connectors、动态扩缩） | 讲"代价" |
+| **02** | **真跑起来会怎么亏、怎么失控？** | **Orchestration Tax（编排税）**：你能同时管几个 agent，不由工具决定，**由你 review 的精力决定**；真吞吐 ≈ min(工具能并行几个，你能看几个)。另附标志性定义：**Loop = Cron + 决策体** | **四个刹车**：独立验收 Verification（验收） / 硬停机 Hard Stop / 花费上限 / Memory 落盘（跨次运行不丢）；外加外围零件（Worktrees、Skills、Connectors、动态扩缩） | 讲"代价" |
 | **03** | **我到底该用哪种？大多数任务需要多复杂？** | **Trigger + Action + Stop（触发器 + 动作 + 停机条件）**：一个 loop 就这三件；外面再加两根柱子 Goal（目标）+ Verification（验收）| **三种阵型 + 各自风险**：Solo（单 agent，默认首选；风险 = 自评偏差）/ Maker-Checker（一个做、一个打分；风险 = 协调成本上升）/ Manager+Helpers（主 agent 派活给多个帮手；风险 = 成本与理解鸿沟放大） | 讲"怎么做" |
 
 ### 3. 三篇的逻辑关系（这就是那条主线）
@@ -214,7 +214,7 @@ Loop 启动
 | **Loop（循环）** | 让 AI 自己一轮一轮干，直到满足完成条件才停 |
 | **Cron（定时任务）** | 时间到了跑一段固定脚本，不会思考、不会变通 |
 | **decision maker in the body（体内决策体）** | loop 比 cron 多的那部分：每轮读状态 → 决定下一步 → 执行 → 检查 → 再判断要不要继续 |
-| **Harness（挽具 / 外壳）** | 包在模型外面的那层工程：拆任务、管上下文、给工具、管权限 |
+| **Harness（挽具 / 外壳）** | 包在模型外面的那层工程。**注意两种口径**：广义 = 给工具 / 管权限 / 管上下文都算；但在**四层演进**里专指第三层，只有一件事——**拆任务 + 管 runtime（把任务队列和运行环境移出模型窗口）**。**工具 / MCP / 搜索是 Context 层的标志，不是 Harness 层的** |
 | **四层演进** | 手艺的四次升级：会说话 → 会自己找资料 → 会拆活管环境 → 连"何时再跑"都自动化 |
 | **Verification（验收）** | 由一个**独立**角色检查"是否真的做到"，不是干活那位自己说好 |
 | **Hard Stop（硬停机）** | 事先定死的停止线：最多几轮 / 最多多久 / 最多花多少钱 |
@@ -274,7 +274,7 @@ while + model  →  ReAct          →  AutoGPT        →  纪律型 Loop
 > | 餐厅经理拆桌位、盯流程 | **Harness** | 外置系统管理 |
 > | 店长看营业数据决定明天要不要继续开业 | **Loop** | 调度与状态驱动 |
 >
-> 这个类比会反复回扣：上下文膨胀≈后厨传单堆满、咖啡杯满了；Verification≈品控员≠主厨；Orchestration Tax≈老板自己也吃不完几百桌菜；Hard Stop≈关门打烊时间。
+> 这个类比会反复回扣：上下文膨胀≈后厨传单堆满、咖啡杯满了；Verification≈品控员≠主厨；Orchestration Tax（编排税）≈老板自己也吃不完几百桌菜；Hard Stop≈关门打烊时间。
 
 ### 1.1 四层"叠环"模型（来自 `09-loop-engineering/01.context-looop-engineering.md:5-12`）
 
@@ -330,9 +330,9 @@ while + model  →  ReAct          →  AutoGPT        →  纪律型 Loop
 
 | 来源 | 定义 |
 |------|------|
-| 01 §7 | "再搭一层脚手架，让 Agent 也能对自己发起下一轮该做什么"——human-guided 走向 self-guided |
+| 01 §7 | "再搭一层脚手架，让 Agent 也能对自己发起下一轮该做什么"——human-guided（人工引导）走向 self-guided（自我引导） |
 | 02 §1 | "你不该再不停地 prompt coding agent；你该设计会去 prompt agent 的 loop" |
-| 03 §0 | "Loop Engineering = 把自己从『不断 prompt 的人』替换掉" |
+| 03 §0 | "Loop Engineering（循环层） = 把自己从『不断 prompt 的人』替换掉" |
 
 **交集**：Loop 的本质是把"下一轮谁来开启"工程化；**不是否定下层，而是 scope 变大后，环必须再往外长一层**（01 §6 关键判断）。
 
@@ -342,15 +342,15 @@ while + model  →  ReAct          →  AutoGPT        →  纪律型 Loop
 
 | 观点 | 01 | 02 | 03 |
 |------|----|----|----|
-| Loop 是不是 buzzword？ | 是争议，但"能力边界持续外扩时值得认真讨论" | 不回避：可能是 cron 换皮 + 烧更多 token | 澄清：别人 10 倍的方式不等于你的方式 |
+| Loop 是不是 buzzword（行话 / 赶时髦的词）？ | 是争议，但"能力边界持续外扩时值得认真讨论" | 不回避：可能是 cron（定时任务）换皮 + 烧更多 token（计费单位） | 澄清：别人 10 倍的方式不等于你的方式 |
 | Loop 是不是 cron？ | —— | **Loop = Cron + decision maker in the body** | Trigger + Action + Stop 三件套 |
-| 上 Loop 的前提 | 可验证、可重复的维护类工作 | Verification、硬停、花费上限、Skill 复利 | Checkable Goal + Hard Stop + Good Tools + Memory + Separate Checker |
+| 上 Loop 的前提 | 可验证、可重复的维护类工作 | Verification（验收）、硬停、花费上限、Skill（技能） 复利（沉淀复用） | Checkable Goal（可验收目标）+ Hard Stop（硬停机）+ Good Tools（好工具）+ Memory（记忆）+ Separate Checker（独立验收人） |
 
 > 三个口径并不冲突：01 谈**何时需要**，02 谈**不装护栏会怎样**，03 谈**怎么落地形态**。**这是递进，不是分歧。**
 
 ### 1.6 反思：Loop 不是万能药（来自 01 §7、03 §2）
 
-- 01 §7 直接列出争议："有人认为它是 buzzword，只会烧更多 token、产出更多 AI slop；目前『一锤定音』的落地案例仍然偏少。"
+- 01 §7 直接列出争议："有人认为它是 buzzword（行话、赶时髦的词），只会烧更多 token（计费单位）、产出更多 AI slop（量大但没人验收、没人用的垃圾产出）；目前『一锤定音』的落地案例仍然偏少。"
 - 03 §2 给出口径："如果不上『24/7 舰队』就落后了"——**通常是错的**。
 
 **判断原则**：**可验证、可重复、停机条件清晰的任务**才适合 Loop；目标模糊、无法客观验收的任务上 Loop 等于"无人值守地犯错"（01 §10 / 02 §10 / 03 §10 三文共同结论）。
@@ -440,11 +440,11 @@ while + model  →  ReAct          →  AutoGPT        →  纪律型 Loop
 | **Loop** | 自我发起下一轮的 Agentic 循环 | 综合三文 |
 | **Trigger** | 触发器（定时 / 事件 / 状态） | `09-loop-engineering/03.loop-engineering.md:11-18` |
 | **Action** | Loop 主体动作（含 Reason→Act→Observe） | `09-loop-engineering/03.loop-engineering.md:147-187` |
-| **Stop Condition** | 何时停（Metric=Result / 硬顶 / 主观停） | `09-loop-engineering/02.loop-engineering.md:78` `09-loop-engineering/03.loop-engineering.md:11-18` |
+| **Stop Condition** | 何时停（Metric=Result（指标即结果，把"做完"写成可测量指标） / 硬顶 / 主观停） | `09-loop-engineering/02.loop-engineering.md:78` `09-loop-engineering/03.loop-engineering.md:11-18` |
 | **Goal** | 目标（尽量客观） | `09-loop-engineering/03.loop-engineering.md:21-50` |
 | **Verification** | 独立验证（Maker≠Checker） | `09-loop-engineering/02.loop-engineering.md:240-274` `09-loop-engineering/03.loop-engineering.md:21-50` |
 | **ReAct** | Reason → Act → Observe 最小工作单元 | `09-loop-engineering/03.loop-engineering.md:147-187` |
-| **Orchestration Tax** | 并行的天花板是 review bandwidth | `09-loop-engineering/02.loop-engineering.md:277-323` |
+| **Orchestration Tax**（编排税） | 并行的天花板是 review bandwidth（评审带宽：你单位时间能认真看完多少产出） | `09-loop-engineering/02.loop-engineering.md:277-323` |
 | **Hard Stop** | 硬顶迭代/时间/花费，防止空转 | `09-loop-engineering/02.loop-engineering.md:368-386` `09-loop-engineering/03.loop-engineering.md:339-358` |
 | **Skills** | 用 SKILL.md 固化项目知识，复利 | `09-loop-engineering/02.loop-engineering.md:389-416` |
 | **Worktrees** | 隔离副本，并行 Agent 不撞文件 | `09-loop-engineering/02.loop-engineering.md:228-237` |
@@ -537,7 +537,7 @@ Observe 可以是：视觉截图、跑测试、打开浏览器检查渲染——
 | 机制 | 01 | 02 | 03 | 是否一致 |
 |------|----|----|----|----------|
 | 停机条件 | "短任务、长时任务能验证" | "硬性花费上限 + 进度停滞" | "Hard Stop + Metric=Result" | ✅ 一致（侧重点互补） |
-| 上下文管理 | "Harness 外置拆任务" | "Memory on disk，跨 run 可回看" | "Memory：跨轮次可回看状态" | ✅ 一致 |
+| 上下文管理 | "Harness 外置拆任务" | "Memory on disk（记忆落到磁盘，跨 run 可回看）" | "Memory：跨轮次可回看状态" | ✅ 一致 |
 | 验证门 | "Sub-agents：做的人 ≠ 验的人" | "独立 Verification" | "Separate Checker" | ✅ 一致 |
 | 成本/护栏 | "套在 Harness 外的自我引导环" | **Orchestration Tax + 硬停 + 花费上限** | "Cost Sense：难目标+难 done=可能跑很久" | ✅ 一致 |
 | 种子 Prompt | —— | **"第一条 prompt 不是更不重要，而是更重要"** | "Stop Condition 必须客观" | ✅ 一致 |
@@ -582,7 +582,7 @@ Stop Condition 是 Loop 能不能跑稳的命门。三文给出的写法可归�
 |------|------|------|------|
 | **客观 Metric = Result** | `score >= 9` / 单测全绿 / 数据已最新 | 强（推荐） | 03 §6.3 Abbey Road："均分 ≥ 9 停，硬顶 8 轮" |
 | **复合硬停** | 迭代数 + 时长 + 花费 三选一做上限 | 中（必备护栏） | 02 §8："硬性花费上限（hard spending limit）" |
-| **主观停** | "直到你满意" / "直到足够自信" | 弱（最后退路） | 03 §6.1：必须主观时训练 Scorer Sub-agent |
+| **主观停** | "直到你满意" / "直到足够自信" | 弱（最后退路） | 03 §6.1：必须主观时训练 Scorer Sub-agent（打分器子代理，专门给产出打分） |
 
 > **面试要点**：能写成 `metric = target` 就别退到主观停；主观停必须配独立 Scorer。**Loop 的上限，就是 Done Check 的上限**（03 §6.3 关键判断）。
 
@@ -671,7 +671,7 @@ Stop Condition 是 Loop 能不能跑稳的命门。三文给出的写法可归�
 | 场景 | 推荐形态 | 关键配置 |
 |------|----------|----------|
 | **数据持续更新**（比分、行情、监控） | Solo Loop + 定时 Trigger | Stop = 数据已最新；Memory = 上一轮结果；独立检查=数据完整性 |
-| **Bug 工单持续涌入** | Maker–Checker + 事件 Trigger | 写代码 ≠ 验代码；Worktree 隔离；Stop = 验证通过 |
+| **Bug 工单持续涌入** | Maker–Checker + 事件 Trigger | 写代码 ≠ 验代码；Worktree（隔离工作树） 隔离；Stop = 验证通过 |
 | **UI 视觉迭代**（缩略图/3D 渲染） | Solo Loop + Metric=Result | 评分 Rubric；Top-N 选择；硬顶 8 轮 |
 | **内容/文稿**（语气、结构） | Solo Loop + 流程检查 | 通常不需要截图；tone-against-tone 对比；不一定要 Loop |
 
@@ -680,7 +680,7 @@ Stop Condition 是 Loop 能不能跑稳的命门。三文给出的写法可归�
 | # | 表现 | 原因 | 解决 |
 |---|------|------|------|
 | 1 | Loop 跑了几小时但没进展 | 缺 Hard Stop + 缺独立 Verification | 装硬顶（迭代数/时长/花费三选一）；加独立 Verifier |
-| 2 | Loop 自信地朝错误方向反复猜测 | 种子 Prompt 模糊 / Stop 主观 | 把 Stop 写成 Metric = Result；模糊处显式列出禁止假设 |
+| 2 | Loop 自信地朝错误方向反复猜测 | 种子 Prompt 模糊 / Stop 主观 | 把 Stop 写成 Metric = Result（指标即结果）；模糊处显式列出禁止假设 |
 | 3 | 钱包出现"洞"——token 烧光 | 没有硬性花费上限 + 进度停滞判断 | 03 §8 清单：Cost Sense + Hard Stop 必备 |
 | 4 | 同仓并行 Agent 互相覆盖 | 没分 Worktree | 02 §4 配方：每 Agent 一份 Worktree 副本 |
 | 5 | 几百 commit 之后跟不上自己系统在做什么 | Orchestration Tax 失守 | 限制并行度 = 你的 review bandwidth；不要"开了几百个 Agent 就当交付" |
@@ -688,7 +688,7 @@ Stop Condition 是 Loop 能不能跑稳的命门。三文给出的写法可归�
 | 7 | Loop 写代码从不检查自己 | 没有 Maker–Checker | 02 §5：Verification 才是让 loop 可信的部分，plumbing 只是水管 |
 | 8 | Loop 每轮都从零学项目约定 | 没沉淀 Skills | 02 §9：Loop 负责运转，Skills 负责复利；每轮把教训写回 SKILL.md |
 | 9 | 主观目标 Loop 永远到不了 100% | 没把目标客观化 | 03 §6.1：metric = target；必须主观时训练一个 Scorer Sub-agent |
-| 10 | 全天候 Swarm / Fleet 越扩越乱 | 不理解就上规模 | 03 §2："不理解就上规模，放大的是问题，不是产出" |
+| 10 | 全天候 Swarm / Fleet（舰队） 越扩越乱 | 不理解就上规模 | 03 §2："不理解就上规模，放大的是问题，不是产出" |
 | 11 | Loop 跨 run 记忆丢光 | Memory 没落盘 | 01 §9：Memory / State（Markdown / Linear / Board）落磁盘，模型会忘，仓库与文件不会 |
 | 12 | Solo Loop 自评偏差无人发现 | 没有 Separate Checker | 03 §8 清单第 5 项：Separate Checker 降低自评自嗨 |
 
@@ -869,4 +869,7 @@ A：能写 `metric = result` 就别退到主观；主观停必须配 Scorer Sub-
 | Sub-agent | 子代理 | 在独立上下文里跑完整循环的 agent；典型用途=让"干的人"和"验的人"分开 |
 | Memory / State | 记忆 / 状态 | 会话外持久化"已做 / 下一步"（Markdown / Board / 数据库） |
 | AI slop | AI 垃圾产出 | 量大但没人验收、没人用的低质产出 |
+| Buzzword | 行话 / 赶时髦的词 | 听着很新但没落到实处的说法；本文用它指"Loop 是不是又一个新瓶装旧酒" |
+| Separate Checker | 独立验收人 | 干活的和验收的必须是两个角色（最好两个 agent），否则自评永远满分 |
+| Logging | 日志 | 把每轮做了什么记下来，事后能审计"系统到底在干嘛" |
 | Cron | 定时任务 | 到点跑固定脚本，不会思考、不会变通 |

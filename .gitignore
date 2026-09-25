@@ -59,3 +59,4 @@ _redact_secrets.py
 .scratch-mem0/
 **/核验报告.txt
 **/合规审计报告.txt
+**/行话审计报告.txt

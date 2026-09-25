@@ -55,7 +55,7 @@
 
 | 靠感觉的后果                        | 数据驱动的能力                                     |
 | ----------------------------------- | -------------------------------------------------- |
-| "感觉这次答得不错" — 这不是工程    | **向老板汇报**：Faithfulness 从 0.61 → 0.84 |
+| "感觉这次答得不错" — 这不是工程    | **向老板汇报**：Faithfulness（忠实度） 从 0.61 → 0.84 |
 | 换了 chunk size，效果变好了？不确定 | **迭代方向明确**：Recall 低 → 加大 top_k    |
 | 上了 reranker，效果提升了？说不清楚 | **版本对比量化**：v2 比 v1 Precision 高 12%  |
 | A/B 测试两个版本选哪个？无法决策    | **CI 中自动回归**：防止新版本悄悄变差        |
@@ -132,7 +132,7 @@ RAG 系统由两个组件构成——**检索器（Retriever）** 和 **生成�
 | 指标                   | 低分含义                                 | 典型原因                              | 对下游影响                                   |
 | ---------------------- | ---------------------------------------- | ------------------------------------- | -------------------------------------------- |
 | **Recall 低**    | 关键文档没找到——"漏网之鱼"             | top_k 太小、chunk 太大、embedding 差  | Generator 缺原材料 → 答案不完整             |
-| **Precision 低** | 检索结果里混入大量噪声——"捞了一堆垃圾" | 缺 Reranker、相似度阈值低、文档质量差 | 噪声干扰 Generator → 答案跑偏、幻觉风险增加 |
+| **Precision 低** | 检索结果里混入大量噪声——"捞了一堆垃圾" | 缺 Reranker（重排序器）、相似度阈值低、文档质量差 | 噪声干扰 Generator → 答案跑偏、幻觉风险增加 |
 
 > **同一个动作（一次检索），同时回答两个问题：该捞的都捞到了吗（Recall）？捞上来的干净吗（Precision）？** 缺一不可。
 
@@ -142,7 +142,7 @@ RAG 系统由两个组件构成——**检索器（Retriever）** 和 **生成�
 >
 > 顾客问服务员："今天有什么招牌菜？"
 >
-> 菜单上实际写的是（这相当于检索到的上下文 / Ground Truth）：**红烧肉饭，配例汤，38 元**。
+> 菜单上实际写的是（这相当于检索到的上下文 / Ground Truth（标准答案））：**红烧肉饭，配例汤，38 元**。
 
 | 服务员           | 回答                                                         | Relevancy | Faithfulness | 解读                                                   |
 | ---------------- | ------------------------------------------------------------ | :-------: | :----------: | ------------------------------------------------------ |
@@ -294,7 +294,7 @@ A：不够。Faithfulness 只告诉你"答案有没有编造"，但不告诉你�
 
 四个指标是从两个维度（检索 vs 生成）× 两个角度（完整 vs 精准）构成的最小完备集合。
 
-**Q2：Context Recall 和传统 IR 的 Recall 有什么区别？**
+**Q2：Context Recall（上下文召回率） 和传统 IR 的 Recall 有什么区别？**
 
 A：传统 IR 的 Recall 需要提前标注"哪些文档是相关的"（GT 文档 ID 集合）。RAGAS 的 Context Recall 只需要一条 GT 答案文本——LLM 会判断 GT 答案中的每个句子是否能从检索上下文中找到支撑。RAGAS 的做法更实操，因为标注文档 ID 的成本远高于写一条标准答案。
 
@@ -308,7 +308,7 @@ A：这是"诚实的半吊子"——LLM 老老实实只用检索到的内容回�
 
 **Q5：RAG 评估中最容易被忽视的指标是哪个？为什么？**
 
-A：Answer Relevancy。因为大家本能地以为"答对了就行"，但其实"答对了但没回答问题"的情况非常常见。比如用户问"退款要多久"，系统回答"退款政策是 30 天内可申请，审核通过后 5-7 个工作日到账"——Faithfulness 没问题（都是文档里的），但其实用户只想知道"几天能到账"，后面的补充信息对这个问题来说是噪声。Relevancy 低意味着系统在浪费用户的时间。
+A：Answer Relevancy（答案相关性）。因为大家本能地以为"答对了就行"，但其实"答对了但没回答问题"的情况非常常见。比如用户问"退款要多久"，系统回答"退款政策是 30 天内可申请，审核通过后 5-7 个工作日到账"——Faithfulness 没问题（都是文档里的），但其实用户只想知道"几天能到账"，后面的补充信息对这个问题来说是噪声。Relevancy 低意味着系统在浪费用户的时间。
 
 ---
 
@@ -331,13 +331,13 @@ A：Answer Relevancy。因为大家本能地以为"答对了就行"，但其实"
 | **K** / **k** | top_k                      | 检索返回数量            | 检索器返回前 K 个结果。K=5 就是看排名前 5 的结果                                                          |
 | **P@i**             | Precision at position i    | 第 i 位截断精确率       | 只看前 i 个检索结果，其中相关的比例是多少。比如前 3 个里有 2 个相关 → P@3 = 2/3                          |
 | **rel(C_i)**        | relevance of chunk i       | 第 i 个结果的相关性标签 | 第 i 个检索结果是否跟问题相关：相关 = 1，不相关 = 0。NDCG 中可以是多级（0/1/2/3）                         |
-| **NLI**             | Natural Language Inference | 自然语言推理            | 给定"前提"和"假设"，判断前提在逻辑上是否支持假设。Faithfulness 中用于验证"这条声明能否从上下文中推理出来" |
+| **NLI**             | Natural Language Inference（自然语言推理） | 自然语言推理            | 给定"前提"和"假设"，判断前提在逻辑上是否支持假设。Faithfulness 中用于验证"这条声明能否从上下文中推理出来" |
 | **gain_i**          | gain at position i         | 第 i 位的相关性增益     | NDCG 专用：第 i 个结果有多相关（0/1/2/3 级标注）。不同于 rel 的二值判断，gain 允许多级                    |
 | **E(q)**            | embedding of q             | 问题 q 的向量表示       | 把文字转换成一串数字（向量），语义相似的句子向量方向也相似                                                |
 | **cos(A, B)**       | cosine similarity          | 余弦相似度              | 衡量两个向量"方向一致性"的指标：1.0 = 方向完全一样，0 = 垂直（无关），-1 = 方向相反                       |
 | **N**               | —                         | 反向问题数量            | Answer Relevancy 中 LLM 从答案生成的反向问题个数，RAGAS 默认 N=3                                          |
 
-> **重要约定**：本文统一使用 **"标准答案（GT）"** 指代参考答案/ground truth/reference。RAGAS 代码中 `reference` 字段名保留不变（那是 API 要求的），但叙述中不再混用。
+> **重要约定**：本文统一使用 **"标准答案（GT）"** 指代参考答案/ground truth/reference（标准答案）。RAGAS 代码中 `reference` 字段名保留不变（那是 API 要求的），但叙述中不再混用。
 
 ---
 
@@ -476,7 +476,7 @@ reference (GT)          ⚠ 人工标注（10% 覆盖）                      Co
 （标准答案）             或 LLM 自动生成（90% 覆盖，需人工抽样验证）
 ```
 
-> **关键认知**：四个指标中，**只有 Context Recall 需要标准答案（GT）**——这是唯一需要"提前准备正确答案"的指标。Faithfulness 只判断答案有没有依据（不判断对不对），Answer Relevancy 只判断是否切题（不判断对不对），Context Precision 只判断检索回来的东西是否相关。
+> **关键认知**：四个指标中，**只有 Context Recall 需要标准答案（GT）**——这是唯一需要"提前准备正确答案"的指标。Faithfulness 只判断答案有没有依据（不判断对不对），Answer Relevancy 只判断是否切题（不判断对不对），Context Precision（上下文精确率） 只判断检索回来的东西是否相关。
 
 ---
 
@@ -1226,7 +1226,7 @@ $$
 
 1. **Claim 粒度过粗**："RAG 能减少幻觉并提升答案准确性"应拆为两条 Claim，否则部分支撑和完全支撑无法区分
 2. **NLI 判断过于宽松**：LLM 倾向于给"看起来有点像"的 Claim 判支撑，需在 Prompt 中强调严格性
-3. **上下文太长**：超过 judge LLM 的上下文窗口时，需要分段验证
+3. **上下文太长**：超过 judge LLM（裁判模型） 的上下文窗口时，需要分段验证
 
 #### 进阶：NLI 三分类模型（Natural Language Inference）
 
@@ -2524,25 +2524,25 @@ SYSTEM_PROMPT = """你是一个严格基于文档的问答助手。
 
 ### C. 关键词中英对照表
 
-| 中文               | English                                      |
-| ------------------ | -------------------------------------------- |
-| 上下文召回率       | Context Recall                               |
-| 上下文精确率       | Context Precision                            |
-| 答案相关性         | Answer Relevancy                             |
-| 忠实度             | Faithfulness                                 |
-| 幻觉               | Hallucination                                |
-| 原子声明           | Atomic Claim / Statement                     |
-| 自然语言推理       | Natural Language Inference (NLI)             |
-| 裁判模型           | Judge LLM                                    |
-| 评估数据集         | Evaluation Dataset                           |
-| 标准答案           | Ground Truth / Reference                     |
-| 假设文档嵌入       | Hypothetical Document Embedding (HyDE)       |
-| 平均倒数排名       | Mean Reciprocal Rank (MRR)                   |
-| 归一化折损累积增益 | Normalized Discounted Cumulative Gain (NDCG) |
-| 重排序器           | Reranker / Cross-Encoder                     |
-| 混合检索           | Hybrid Search                                |
-| 分块大小           | Chunk Size                                   |
-| 重叠量             | Chunk Overlap                                |
+| 中文 | English | 一句人话 |
+|------|---------|---------|
+| 上下文召回率 | Context Recall | 该找的资料找到了多少——查"漏没漏" |
+| 上下文精确率 | Context Precision | 找回来的资料里有多少真正相关——查"混没混垃圾" |
+| 答案相关性 | Answer Relevancy | 答案切不切题（可能很忠实但答非所问）|
+| 忠实度 | Faithfulness | 答案是否都能在检索到的上下文里找到依据（查幻觉）|
+| 幻觉 | Hallucination | 编造出上下文里根本没有的内容 |
+| 原子声明 | Atomic Claim / Statement | 把答案拆成一条条最小的可核验事实句 |
+| 自然语言推理 | Natural Language Inference (NLI) | 判断"前提是否支持假设"的三分类模型，用来逐条验证忠实度 |
+| 裁判模型 | Judge LLM | 用另一个模型当阅卷老师打主观分 |
+| 评估数据集 | Evaluation Dataset | 固定的测试题集合，保证每次评的是同一把尺子 |
+| 标准答案 | Ground Truth / Reference | 人工标注的参考答案，算召回/精确率的基准 |
+| 假设文档嵌入 | Hypothetical Document Embedding (HyDE) | 先让模型"编"一段像答案的文字，再用它去检索 |
+| 平均倒数排名 | Mean Reciprocal Rank (MRR) | 第一个正确结果排得越靠前，分越高 |
+| 归一化折损累积增益 | Normalized Discounted Cumulative Gain (NDCG) | 考虑排序位置的检索质量分：正确结果排得越靠后越要打折 |
+| 重排序器 | Reranker / Cross-Encoder | 粗召回之后再精排一遍，把最相关的顶上来 |
+| 混合检索 | Hybrid Search | 向量检索 + 关键词检索一起用，互补 |
+| 分块大小 | Chunk Size | 一篇文档切成多大的片段再入库 |
+| 重叠量 | Chunk Overlap | 相邻片段之间故意重叠的字数，防止答案被切在边界上 |
 
 ---
 

@@ -118,10 +118,10 @@ Agent 面临一模一样的问题。LLM 的原生状态只有"当前这一次 AP
 
 想象你刚认识一个同事。第一天你跟 TA 开了三次会：
 
-- **工作记忆（Working Memory）**：TA 现在正在跟你讨论的那个方案——"刚才你说的第三点，我补充一下……"——容量极小（约 4±1 个信息块），但实时可用。
-- **情景记忆（Episodic Memory）**：TA 记得今天上午的会你坐在窗边、下午的会你换到了角落——带时间戳的事件记录。
-- **语义记忆（Semantic Memory）**：TA 一周后记得"你喜欢用中文沟通""你对 React 很熟""你讨厌周五下午开会"——从大量情节中抽象出来的耐久事实。
-- **程序性记忆（Procedural Memory）**：TA 知道怎么用 Git、怎么写单元测试、怎么做 code review——自动化的技能。
+- **工作记忆（Working Memory（工作记忆））**：TA 现在正在跟你讨论的那个方案——"刚才你说的第三点，我补充一下……"——容量极小（约 4±1 个信息块），但实时可用。
+- **情景记忆（Episodic Memory（情景记忆））**：TA 记得今天上午的会你坐在窗边、下午的会你换到了角落——带时间戳的事件记录。
+- **语义记忆（Semantic Memory（语义记忆））**：TA 一周后记得"你喜欢用中文沟通""你对 React 很熟""你讨厌周五下午开会"——从大量情节中抽象出来的耐久事实。
+- **程序性记忆（Procedural Memory（程序性记忆））**：TA 知道怎么用 Git、怎么写单元测试、怎么做 code review——自动化的技能。
 
 现在把这个人换成 Agent。Agent 也有完全对应的四层：
 
@@ -283,7 +283,7 @@ A：第一句先划清边界："我们首先要分清三个东西——context w
 | **embedding** | embedding | 文本向量 | 把一段文字转成 768 维（或更多）的数字数组，语义相似的句子向量方向也相似 |
 | **cos(A, B)** | cosine similarity | 余弦相似度 | 两个向量方向的一致性：1.0 = 完全同向，0 = 无关 |
 | **decay_lambda** | decay_lambda | 衰减系数 | 控制"越久远的记忆越不重要"的速度。越大 = 忘得越快 |
-| **min-max 归一化** | min-max normalization | 缩放到 [0, 1] | 把不同量纲的分数拉到同一个尺度，才能加权相加 |
+| **min-max 归一化** | min-max normalization（Min-max 归一化） | 缩放到 [0, 1] | 把不同量纲的分数拉到同一个尺度，才能加权相加 |
 | **recency** | recency | 近期性 | 这条记忆最近被访问过吗？越久未访问分数越低 |
 | **importance** | importance | 重要性 | 写入时人工或 LLM 标注的权重，范围 0~1 |
 | **NLI** | Natural Language Inference | 自然语言推理 | 判断一句话能否从另一句话推导出来（Faithfulness 评估用，本章不涉及） |
@@ -967,7 +967,7 @@ A：用 tiktoken 库的模型对应编码。不能用 Python 的 `len()` 因为 
 
 A：余弦相似度公式 `cos(A,B) = A·B / (|A| × |B|)`。当两个向量都经过 L2 归一化后，它们的模长 `|A| = |B| = 1`，分母变成 `1×1 = 1`，所以 `cos = A·B`（点积）。直接用 `np.dot` 省掉除法操作。在 SentenceTransformer 中设置 `normalize_embeddings=True` 即可。
 
-**Q3：Running Summary 和 Map-Reduce Summary 有什么区别？什么时候升级？**
+**Q3：Running Summary（摘要记忆） 和 Map-Reduce Summary 有什么区别？什么时候升级？**
 
 A：Running Summary 是 Refine 式增量更新——每次在旧摘要基础上合并新对话，O(n) 的 LLM 调用次数。Map-Reduce 是分块摘要——先对每段独立摘要，再合并摘要的摘要，适合历史极长（几百轮）的场景。升级信号：当 Running Summary 的 buffer 越来越大、单次增量更新耗时明显增加时，切换为 Map-Reduce。
 
@@ -1062,7 +1062,7 @@ Write → Store → Reconcile → Retrieve → Rank → Forget
 
 > **面试口述**："记忆系统不是存了就行，最难的工作是调和——当用户周一说了 A、周三说了非A，你要决定信哪一个。Last-Write-Wins 是最简单的默认策略，关键冲突要升级给用户确认。"
 
-**Reconcile 的隐含前提：键值对齐**。五种策略生效的前提是——同一个 key 只允许一条有效记忆。"每个检索 key 对你都只能是同一条信息，不是多条。"（AI_Julie 视频 09）如果同一个偏好存了多条，检索时两条都捞出来，模型不知道该听谁的——这不是模型幻觉，是你自己的存储设计导致的。
+**Reconcile（调和/对齐） 的隐含前提：键值对齐**。五种策略生效的前提是——同一个 key 只允许一条有效记忆。"每个检索 key 对你都只能是同一条信息，不是多条。"（AI_Julie 视频 09）如果同一个偏好存了多条，检索时两条都捞出来，模型不知道该听谁的——这不是模型幻觉，是你自己的存储设计导致的。
 
 **检索侧的降级处理**：conflict 标记的记忆在检索时降权或不注入。"这种 conflict 的还是不注入为好，注入了反而让模型产生幻觉。"（AI_Julie 视频 09）已有报告五种冲突策略表覆盖了**存储侧**处理（写的时候怎么办），本补充覆盖了**检索侧**处理（读的时候遇到冲突怎么办）——两边配合才完整。
 
@@ -1178,7 +1178,7 @@ Claude Code 的记忆系统是"文件仓库 + 索引 + 按需加载"模式的成
 
 Agent 每一天产生大量"情节"（"10:23 用户问了 X，助手回 Y""14:15 用户纠正了偏好 Z"）。但注入上下文的应该是"语义"（"用户偏好 Z"），不是全量情节日志。
 
-**门控巩固（Gated Consolidation）流程**：
+**门控巩固（Gated Consolidation（门控巩固））流程**：
 
 ```
 Episodic Log（情节日志）
@@ -1435,11 +1435,11 @@ A：两个原因。① 成本：每次写入需要 embedding 计算，频繁写�
 
 A：三个维度自建评测。① Reconcile 准确性——三问测试（稳定偏好应记住/变更事实应覆盖/从不知道的应拒绝瞎编）。② 检索命中率——准备 20 条标注数据（query→期望召回的记忆 ID），计算 recall@k。③ 遗忘控制——长期运行后审计，检查过时记忆是否被正确清理、重要记忆是否被误删。目前没有像 RAGAS 那样的成熟标准框架，记忆评测是开放问题——这意味着你在面试中提到"我自建了三问测试"本身就是区分度。
 
-**Q7：Context rot 是什么？怎么解释给面试官听？**
+**Q7：Context rot（上下文腐烂） 是什么？怎么解释给面试官听？**
 
 A："Context rot = 上下文越长，模型的注意力越不均匀。Transformer 架构不保证均匀读完整段输入——你输了一大堆内容，它可能只认真地读头尾，中间区域随意扫描。研究显示，几千 token 的历史下，会话早期的指令遵从率可能掉到 1/3。所以 memory 系统的价值不是能存多少——而是扔掉了多少。保持活跃上下文小而精，模型才清醒。"面试官追问修复方向 → "① 检索排序只注 top-k（不是越多越好）② 摘要管长历史、不拼全量原文 ③ Context rot 是 transformer 先天的缺陷，不要把修复希望寄托在'更大窗口'上。"
 
-**Q8：记忆投毒（memory poisoning）的路径是什么？怎么防？**
+**Q8：记忆投毒（memory poisoning（记忆投毒））的路径是什么？怎么防？**
 
 A：路径——毒内容（恶意 README/邮件/网页）被 Agent 读入 → Write 环节未识别 → 写入长期记忆 → 数天后另一高权限会话检索召回并全量加载到 context → 持久记忆把一次性漏洞变成了潜伏 Agent。防御方向：① 写入前加可信度评分（来源可信度、与已有事实的一致性校验）② 关键操作前人工确认 ③ 定期审计长期记忆中的高敏感条目。面试中能独立讲清这个攻击路径是高分信号——大多数候选人只关注 memory "怎么存"，没人想"存错了怎么办"。
 
@@ -1526,24 +1526,24 @@ memories/
 
 ### C. 关键词中英对照表
 
-| 中文 | English |
-|------|---------|
-| 滑动窗口记忆 | Windowed / Sliding Window Memory |
-| 摘要记忆 | Summary Memory / Running Summary |
-| 长期记忆 | Long-term Memory |
-| 工作记忆 | Working Memory |
-| 情景记忆 | Episodic Memory |
-| 语义记忆 | Semantic Memory |
-| 程序性记忆 | Procedural Memory |
-| 三因子打分 | Three-factor Scoring |
-| 调和/对齐 | Reconcile |
-| 门控巩固 | Gated Consolidation |
-| 上下文腐烂 | Context Rot |
-| 记忆投毒 | Memory Poisoning |
-| 指数衰减 | Exponential Decay |
-| Min-max 归一化 | Min-max Normalization |
-| 增量摘要 | Incremental / Refine Summary |
-| 反思/策略记忆 | Reflexion / Strategic Memory |
+| 中文 | English | 一句人话 |
+|------|---------|---------|
+| 滑动窗口记忆 | Windowed / Sliding Window Memory | 只保留最近 N 条消息，旧的直接丢——省事但会丢掉早期事实 |
+| 摘要记忆 | Summary Memory / Running Summary | 让模型把历史压成一段摘要：保留语义、丢掉原话 |
+| 长期记忆 | Long-term Memory | 跨会话存下来的事实，存在外面（库 / 文件），用时再召回 |
+| 工作记忆 | Working Memory | 当前这轮对话正在用的那点信息，容量极小但实时可用 |
+| 情景记忆 | Episodic Memory | "什么时候发生了什么"的具体事件（如：上周三定了用 Postgres）|
+| 语义记忆 | Semantic Memory | 从多次事件里抽象出的稳定事实（如：用户偏好中文）|
+| 程序性记忆 | Procedural Memory | "一件事该怎么做"的流程知识，通常落成文件 / Skill |
+| 三因子打分 | Three-factor Scoring | 相关性 + 近期性 + 重要性加权算分，决定召回哪几条 |
+| 调和/对齐 | Reconcile | 新信息和旧记忆冲突时，决定谁覆盖谁 |
+| 门控巩固 | Gated Consolidation | 不是每轮都整理记忆，攒够了 / 被触发了才巩固一次 |
+| 上下文腐烂 | Context Rot | 上下文塞太长后，模型对中段信息注意不到、答得变差 |
+| 记忆投毒 | Memory Poisoning | 往记忆里写入恶意或错误内容，之后长期影响回答 |
+| 指数衰减 | Exponential Decay | 时间越久分数掉得越快（越旧的越不优先召回）|
+| Min-max 归一化 | Min-max Normalization | 把不同量纲的分数拉到 0–1 同一尺度，才能加权相加 |
+| 增量摘要 | Incremental / Refine Summary | 新内容到了就往摘要上"续着改"，而不是从零重写 |
+| 反思/策略记忆 | Reflexion / Strategic Memory | 把"上次为什么失败、下次该怎么办"记下来复用 |
 
 ### D. 超精炼速查卡（面试前 5 分钟版）
 

@@ -101,7 +101,7 @@
 
 你打开 `agent.log` 翻 2 小时日志：WARNING 散落各处，没有任何一行能告诉你"这次为什么会编"。你打开 `06_trace.md`：好消息它存在，坏消息——它告诉你"模型在 api#2 选了 `execute_code`"（来源：`08-hermes-agent\03-eval\demo\exports\eval_run\03_trace_rca.md:32`），但你不知道它**为什么选错**——system 没漂、role 没破、prompt 也刚调过。
 
-你只能拍脑袋猜：「是不是 prompt 改坏了？」「是不是该换模型？」「是不是 top_k 该小？」——**这就是没有 trace 的工程**：优化靠直觉，验证靠感觉，事故复盘靠猜。
+你只能拍脑袋猜：「是不是 prompt 改坏了？」「是不是该换模型？」「是不是 top_k 该小？」——**这就是没有 trace（追踪） 的工程**：优化靠直觉，验证靠感觉，事故复盘靠猜。
 
 > **（课程观点）** HF Agentic Evals Workshop 把这类问题归到 Reliability 维度——Capability 涨得快，Reliability 涨得慢，「基准刷分很猛、生产用不起来」的主要原因（来源：`99-My idea\Agent eval\01-eval.md:18`）。一个 99 分的 RAGAS 报告 + 一条线上幻觉，**等于零**。
 
@@ -113,7 +113,7 @@
 | 改了 `chunk_size`，效果变好了？不确定 | 迭代方向明确：Recall 低 → 加大 `top_k` |
 | 上了 reranker，提升分？说不清 | 版本对比量化：v2 比 v1 Precision +12% |
 | A/B 选哪个？拍脑袋 | CI 自动回归：新版本悄悄变差 → 红灯 |
-| 线上事故复盘靠猜 | 冻成 fixture，根因可复现可讲 |
+| 线上事故复盘靠猜 | 冻成 fixture（测试夹具），根因可复现可讲 |
 
 > 上表是上一轮 D3 RAG 专题同一对比表在本层的**回扣**——评测对 RAG 与对 Agent 都一样：**没有它，优化全靠感觉游戏**（来源：`00-我的深度整合专题\RAG评估深度解析\RAG_Evaluation_Deep_Dive.md:62` + `08-hermes-agent\03-eval\README.md:86`）。
 
@@ -149,12 +149,12 @@
 | **Log（agent.log + session_tag）** | 病历本（按 session 钉在一起） | 任何时刻能 grep 出"这个 session 的 WARNING" |
 | **Eval（九项 check）** | 体检项目（血压 / 血糖 / 肝功） | 对**已冻结的**轨迹做 0/1 断言 |
 | **Judge（LLM-as-judge）** | 主任医师复诊（带主观判断） | 对开放性回答打 0-10 分 + 一句话原因 |
-| **Release Gate（`make gate`）** | 体检合格线（血压 ≥ 90/60 不放行） | deterministic 100% 必过 + judge 阈值 |
+| **Release Gate（`make gate`）** | 体检合格线（血压 ≥ 90/60 不放行） | deterministic（确定性的） 100% 必过 + judge（裁判模型） 阈值 |
 | **护栏（retrieval_gate / 引用拒答）** | 安全气囊（事故时弹出，平时不显） | 入/出内容过滤、不该拉的不要拉 |
 | **策略（governance 三段）** | 医嘱（术前/术中/术后） | 业务规则落在时间轴上 |
 | **归因链 8 步** | 体检报告的「异常项」从上往下追 | RAG→解析→记忆→mem0→工具→loop→模型→微调 |
 
-> **回扣**：§1.1 三种 Eval 是"体检套餐"不同档位（LLM 套餐 / RAG 套餐 / Agent 套餐）；§1.2 Trace 是"化验单"为什么不能省；§1.3 确定性测试 vs LLM-judge 是"机器指标 vs 主任医师"分工；§1.4 归因链是"异常项从顶到底追"；§1.5 护栏 vs 策略 是"气囊 vs 医嘱"。
+> **回扣**：§1.1 三种 Eval（评测） 是"体检套餐"不同档位（LLM 套餐 / RAG 套餐 / Agent 套餐）；§1.2 Trace 是"化验单"为什么不能省；§1.3 确定性测试 vs LLM-judge 是"机器指标 vs 主任医师"分工；§1.4 归因链是"异常项从顶到底追"；§1.5 护栏 vs 策略 是"气囊 vs 医嘱"。
 
 ### 1.1 Agent Eval ≠ LLM Eval ≠ RAG Eval（先别混）
 
@@ -186,7 +186,7 @@ Log     查细节 —— 这个 session WARNING 原文？工具抛了啥？
 
 ### 1.3 确定性测试 vs LLM-as-judge（轴别混淆）
 
-| 维度 | 确定性测试（Hermes pytest / waku Completion） | LLM-as-judge（waku judge / RAGAS Faithfulness） |
+| 维度 | 确定性测试（Hermes pytest / waku Completion） | LLM-as-judge（裁判模型）（waku judge / RAGAS Faithfulness） |
 |------|----------------------------------------------|---------------------------------------------------|
 | 适用 | 有 ground truth 的「对/错」可程序化判断 | 开放文本质量、主观优劣 |
 | 成本 | 几乎为 0（跑 pytest） | 1 次 judge 调用 / 列 |
@@ -206,7 +206,7 @@ waku 把这两条轴做成两条独立分（来源：`12-hermes-agent-small\docs
 
 | # | 失败层 | 信号 | 本仓库观测手段 |
 |---|--------|------|---------------|
-| ① | **RAG 检索** | 召回漏、噪声多 | RAGAS `context_recall` / `context_precision`（`02-RAG\04_RAG_Evaluation\lesson2_rag_metrics\README.md:122-147`）；`05-model-route\11\governance\before.py:14-20` 检索 grounding |
+| ① | **RAG 检索** | 召回漏、噪声多 | RAGAS `context_recall` / `context_precision`（`02-RAG\04_RAG_Evaluation\lesson2_rag_metrics\README.md:122-147`）；`05-model-route\11\governance\before.py:14-20` 检索 grounding（据实） |
 | ② | **解析 / 格式** | 工具 schema 不规范 | `08-hermes-agent\03-eval\notes\07_test_memory_provider.md:146-166` `normalize_tool_schema`（防止裸函数 schema 让 DeepSeek 整请求 400） |
 | ③ | **记忆** | 同一会话 system 漂、砸 Prompt Cache | `08-hermes-agent\03-eval\notes\07_test_memory_provider.md:219-232`；Eval `system_stable` check（`08-hermes-agent\03-eval\demo\teaching\invariants\checkers.py:35-57`） |
 | ④ | **mem0 / 长记忆** | 实体抽取错 / threshold 偏 | `99-My idea\AI Agent 学习指南\02.mem0-核对报告.md`（单路 ANN + 三路打分 + 融合前阈值） |
@@ -215,7 +215,7 @@ waku 把这两条轴做成两条独立分（来源：`12-hermes-agent-small\docs
 | ⑦ | **模型** | 输出语言风格、JSON 解析失败 | `12-hermes-agent-small\waku\ops\judge.py:95-101` bad JSON 降级为 `None`；reasoning 模型（如 kimi-k3）慢但裁判稳 |
 | ⑧ | **微调 / Prompt** | 偏置持久 | 见 `10-CICD\02-pytest\README.md:12-19` 门禁分流；`12-hermes-agent-small\waku\ops\release_gate.py:84-110` `make gate`（deterministic 100% 才放行） |
 
-> **（课程观点）** Agent Eval 不能只看最终 pass rate。HF Agentic Evals Workshop 拆 Reliability 为 Consistency / Robustness / Calibration / Failure severity 四维，每维独立测（`99-My idea\Agent eval\01-eval.md:69-92`）。这四维其实就是把上表"步数/工具/loop"做了正交分解。
+> **（课程观点）** Agent Eval 不能只看最终 pass rate。HF Agentic Evals Workshop 拆 Reliability 为 Consistency（一致性） / Robustness（鲁棒性） / Calibration / Failure severity 四维，每维独立测（`99-My idea\Agent eval\01-eval.md:69-92`）。这四维其实就是把上表"步数/工具/loop"做了正交分解。
 
 ### 1.5 护栏库 ≠ 安全策略
 
@@ -251,10 +251,10 @@ waku 把这两条轴做成两条独立分（来源：`12-hermes-agent-small\docs
 
 ### 📋 面试卡片（概念层）
 
-1. **Agent Eval ≠ Pass Rate。** 至少报 Capability + Reliability + Cost + 轨迹。
+1. **Agent Eval ≠ Pass（通过） Rate。** 至少报 Capability + Reliability + Cost + 轨迹。
 2. **Runtime 跑、Trace 记、Eval 评**——三件事各居其位，Eval 不在 while 内。
 3. **断言关系，不冻结快照。** `assert api_calls == 7` 是 change-detector，模型发版就红。
-4. **裁判 ≠ 选手。** waku 用 gpt-5.6-sol 而非 kimi-k3 当裁判；judge 失败降级为 `None`，不挂 race。
+4. **裁判 ≠ 选手。** waku 用 gpt-5.6-sol 而非 kimi-k3 当裁判；judge 失败降级为 `None`，不挂 race（竞态）。
 5. **归因链 8 步**：RAG → 解析 → 记忆 → mem0 → 工具 → loop → 模型 → 微调，每步有对应观测手段。
 6. **护栏 ≠ 策略**：护栏是过滤、策略是规则；两者分清才不把业务规则写到过滤器里。
 
@@ -280,7 +280,7 @@ waku 把这两条轴做成两条独立分（来源：`12-hermes-agent-small\docs
 | `Completion` | 0/1 决定论：expect_tool / expect_in_args / min_tool_calls | §2.2.2 | `12-hermes-agent-small\waku\ops\scoring.py:31-47` |
 | `Quality` | 0-10 主观分 + 一句 reason（K3 如 GPT-5.6-sol 打分） | §2.2.2 | `12-hermes-agent-small\docs\benchmarks.md:55-67` |
 | `pass rate` | 整批 case 中 `passed == True` 的比例（aggregate） | §1.4 | `99-My idea\Agent eval\01-eval.md:227-229` 警示：单独看 aggregate = 信息不足 |
-| `p99`（P99 latency） | 99% 请求的延迟上界，观测 SLO 用 | §1.2 | `08-hermes-agent\03-eval\notes\02_logging_trace.md:13` |
+| `p99`（P99 latency） | 99% 请求的延迟上界，观测 SLO（服务目标） 用 | §1.2 | `08-hermes-agent\03-eval\notes\02_logging_trace.md:13` |
 | `JSONL` | 一行一事件的纯文本格式，waku trace / Compare / eval_runs 通用 | §2.2.1 / §2.2.4 | `12-hermes-agent-small\waku\ops\tracing.py:99-101` |
 | `OTel`（OpenTelemetry） | trace 的工业标准，waku 通过 OTLP endpoint 可选接入 | §2.2.1 | `12-hermes-agent-small\waku\ops\tracing.py:9-19` |
 | `canary`（金丝雀） | 按 user_id 哈希稳定分流 5~10% 到新版本 | §3.3 | `05-model-route\09\deploy\canary.py:4-7` |
@@ -348,7 +348,7 @@ tool_result  → name + args + result（可截断）
 loop_exit    → reason / budget_used / interrupted
 ```
 
-RCA 四步（来源：`08-hermes-agent\03-eval\notes\02_logging_trace.md:188-208`）：
+RCA（根因分析） 四步（来源：`08-hermes-agent\03-eval\notes\02_logging_trace.md:188-208`）：
 1. **退出理由？** `budget_exhausted` / `budget_grace_call` / `interrupt` / 正常文本？
 2. **工具选对了吗？** 期望工具是否出现在 `tool_calls` 序列？有没有反复同 query 空转？
 3. **上下文病了吗？** 同 turn 内 system 是否变化？是否出现同 role 连发 / 合成 user？
@@ -399,7 +399,7 @@ def score_case(case, run) -> CaseScore:
 - `case_id: golden-loop-ok` · `exit_reason: budget_grace_call` · `api_calls: 7`
 - 九项全绿：`role_alternation ok`、`system_stable stable across 6 api_requests`、`tools_frozen frozen ['todo','web_search']`、`budget_consistent ok`
 
-负例 FAIL（`08-hermes-agent\03-eval\demo\exports\eval_run\03_trace_rca.md:1-44`）：
+负例 FAIL（不通过）（`08-hermes-agent\03-eval\demo\exports\eval_run\03_trace_rca.md:1-44`）：
 
 - `root_cause: wrong_tool+role_break+cache_break`
 - `exit_reason: budget_exhausted` · `api_calls: 3`
@@ -411,7 +411,7 @@ def score_case(case, run) -> CaseScore:
 
 #### 2.2.1 tracing.py（**Always-on JSONL + 可选 OTel**）
 
-一 run = 一个 root span，事件流写 `<home>/traces/<date>.jsonl`（来源：`12-hermes-agent-small\waku\ops\tracing.py:57-159`）：
+一 run = 一个 root span（跨度），事件流写 `<home>/traces/<date>.jsonl`（来源：`12-hermes-agent-small\waku\ops\tracing.py:57-159`）：
 
 ```python
 class Tracer:
@@ -426,7 +426,7 @@ class Tracer:
 ```
 
 关键细节：
-- `OTEL_EXPORTER_OTLP_ENDPOINT` 设了走 OTel，没设只走 JSONL——**永远有 trace**（来源：`12-hermes-agent-small\waku\ops\tracing.py:18-19`）。
+- `OTEL_EXPORTER_OTLP_ENDPOINT` 设了走 OTel，没设只走 JSONL（行式日志）——**永远有 trace**（来源：`12-hermes-agent-small\waku\ops\tracing.py:18-19`）。
 - `Phoenix` / `Langfuse` / 自建 OTel 都接同一个 instrumentation（来源：`12-hermes-agent-small\waku\ops\tracing.py:9-19`）。
 - 强制 UTF-8：legacy GBK 文件**只报错不改写**（来源：`12-hermes-agent-small\waku\ops\tracing.py:91-101`、`12-hermes-agent-small\evals\deterministic\test_trace_encoding.py:91-104`）。
 - 崩溃 turn 不污染后续缩进（来源：`12-hermes-agent-small\evals\deterministic\test_show_trace.py:33-52`）。
@@ -470,7 +470,7 @@ def judge_reply(...):
     # bad JSON 直接降级为 None（不挂 race）
 ```
 
-> **（课程观点）** waku 把 Quality 的 ground truth 设成「实际跑过的工具列表」——同一段回复，没传 tools 时被评 0、传了评 10（来源：`12-hermes-agent-small\docs\benchmarks.md:249-254`）。**这是 LLM-as-judge 防幻觉误判的关键补丁**，面试可讲。
+> **（课程观点）** waku 把 Quality 的 ground truth 设成「实际跑过的工具列表」——同一段回复，没传 tools 时被评 0、传了评 10（来源：`12-hermes-agent-small\docs\benchmarks.md:249-254`）。**这是 LLM-as-judge（裁判模型） 防幻觉误判的关键补丁**，面试可讲。
 
 #### 2.2.3 release_gate.py（**门禁三件套**）
 
@@ -515,12 +515,12 @@ def main():
 | **裁判模型** | 没有显式 judge（只离线打分） | `gpt-5.6-sol` K3-as-referee + 信号量 + 退避 |
 | **门禁** | pytest contract 必绿 | `release_gate.py`：deterministic 100% + judge 阈值 |
 | **失败处理** | RCA 报告（`root_cause + evidence + fix_hypothesis`） | judge bad JSON 降级为 `None`，race 不挂 |
-| **横向基准** | 无 Compare 竞技场 | `compare_history.py` 独立 JSONL（不污染 state.db） |
+| **横向基准** | 无 Compare 竞技场（对照擂台） | `compare_history.py` 独立 JSONL（不污染 state.db（状态库）） |
 | **典型产物** | `exports/eval_run/03_trace_rca.md`（人读 RCA） | `<home>/eval_report.json` + `eval_runs.jsonl`（机器读） |
 
 **核心差异（3 条以内）：**
 1. **评测哲学**：hermes 偏"断言行为契约，不冻结快照"；waku 偏"0/1 决定论 + 主观分打分"双轴。
-2. **观测设施**：hermes 用 session_tag + trace 事件流；waku 用 JSONL 永远开 + OTel 桥接（Phoenix/Langfuse）。
+2. **观测设施**：hermes 用 session_tag（会话标签） + trace 事件流；waku 用 JSONL 永远开 + OTel 桥接（Phoenix/Langfuse）。
 3. **门禁形态**：hermes 走 pytest 真仓契约（`run_tests.sh`）；waku 走 `release_gate.py` 把 deterministic / judge 拆两道（前者 100% 必过，后者阈值才放行）。
 
 ### 📋 面试卡片（实现层）
@@ -636,11 +636,11 @@ after ：FeedbackRecord → hallucination_rate() ≥ 5% → needs_review()
 3. **judge 用同款模型 = 自评**（`12-hermes-agent-small\waku\ops\judge.py:11-15` + `12-hermes-agent-small\docs\benchmarks.md:237-244`）。用 gpt-5.6-sol 这种"擅思但不擅工具"的模型当裁判。
 4. **judge 失败必须降级为 `None`，不能抛**（`12-hermes-agent-small\waku\ops\judge.py:80-101` + `12-hermes-agent-small\evals\deterministic\test_judge.py:66-67`）。一个裁判抽风不能挂整场 race。
 5. **采样率拍脑袋 = 数据漂移**（`99-My idea\Agent eval\01-eval.md:79-92` Reliability 维度）。Fail severity ≠ Capability，删库的成本是答错成本的 1000 倍；采样要按"严重度分层"。
-6. **门禁阈值拍脑袋 = 名存实亡**（`12-hermes-agent-small\waku\ops\release_gate.py:84-110` + `10-CICD\02-pytest\README.md:12-19`）。先看历史 baseline 的 P50/P90，再设比 P90 高 5% 的阈值。
+6. **门禁阈值拍脑袋 = 名存实亡**（`12-hermes-agent-small\waku\ops\release_gate.py:84-110` + `10-CICD\02-pytest\README.md:12-19`）。先看历史 baseline 的 P50（50 分位延迟）/P90（90 分位延迟），再设比 P90 高 5% 的阈值。
 7. **只测 happy path = 上线即崩**（`08-hermes-agent\03-eval\notes\02_logging_trace.md:188-208` + `08-hermes-agent\03-eval\demo\fixtures\failure_run.json`）。**必须有合成负例**驱动 RCA，不能"全部用例都 PASS"就算了。
 8. **trace 写 GBK = 整文件污染**（`12-hermes-agent-small\waku\ops\tracing.py:91-101` + `12-hermes-agent-small\evals\deterministic\test_trace_encoding.py:91-104`）。JSONL 必须强制 UTF-8，legacy GBK **只报错不改写**。
 9. **崩溃 turn 把后续都向右推**（`12-hermes-agent-small\waku\ops\show_trace.py:81-93` + `12-hermes-agent-small\evals\deterministic\test_show_trace.py:33-52`）。turn 缩进用"赋值而非累加"，turn_start/turn_end 永远 flush left。
-10. **Compare 基准污染 state.db**（`12-hermes-agent-small\waku\ops\compare_history.py:1-17`）。基准是 throwaway sandbox，**必须独立 JSONL**，绝不写 chat_log / facts / calendar。
+10. **Compare 基准污染 state.db**（`12-hermes-agent-small\waku\ops\compare_history.py:1-17`）。基准是 throwaway sandbox，**必须独立 JSONL**，绝不写 chat_log（日志） / facts / calendar。
 11. **judge 看到完整工具列表还误判**（`12-hermes-agent-small\docs\benchmarks.md:249-254`）。把"实际跑过的工具列表"显式喂给裁判当 ground truth。
 12. **RAG 优化顺序错**（`02-RAG\04_RAG_Evaluation\lesson2_rag_metrics\README.md:140-147`）。Recall 低先修检索再修生成；Precision 低先加 Reranker；Faithfulness 低但 Recall 正常才动 Prompt。
 13. **多条 trace 同写一个 daily 文件 = 编码混**（`12-hermes-agent-small\waku\ops\tracing.py:91-98`）。每个 daily JSONL 必须**只允许一种编码**，写入前 validate 一次。
@@ -708,3 +708,40 @@ after ：FeedbackRecord → hallucination_rate() ≥ 5% → needs_review()
 | 发布策略 | — | — | — | blue_green / canary / governance |
 | 关键不变量 | role / system / tools / budget | UTF-8 / judge 降级 / session 恢复 | — | — |
 | 面试一句话 | "Runtime 跑、Trace 记、Eval 评" | "0/1 决定论 + LLM 主观分" | "先检索后生成" | "MR smoke → release gate" |
+
+---
+
+### 附录 C · 中英对照术语表（看不懂正文就回来查这里）
+
+> 阅读规则：**正文里第一次出现某行话时都会写成「词（中文）」**；本表是兜底，不是首次解释。
+
+| 英文术语 | 中文 | 一句人话 |
+|---|---|---|
+| Trace | 追踪 | 一次用户消息走完整条主循环的事件流水，用来查"为什么这样走" |
+| Span | 跨度 | 追踪里的一个片段（一次模型调用 / 一次工具调用）|
+| Metrics | 指标 | 数值化的长期观测（耗时、成本、成功率），用来看趋势和 SLO |
+| Log | 日志 | 纯文本细节，出事时看"到底报了什么错" |
+| SLO | 服务目标 | 对外承诺的服务水平（如 99% 请求 3 秒内返回）|
+| P50 / P90 / P99 | 分位数延迟 | 50% / 90% / 99% 的请求在多少毫秒内完成；**P99 才暴露长尾** |
+| Eval | 评测 | 用固定用例给 Agent 打分的动作，不是"跑一遍看看" |
+| Test vs Eval | 测试 vs 评测 | Test 考源码 / 契约（确定性的），Eval 考整条冻结轨迹（含主观）|
+| deterministic | 确定性的 | 同样输入永远同样输出，所以可以硬性要求 100% 通过 |
+| Invariant | 不变量 | 无论怎么跑都必须成立的断言（如"system 块不许变"）|
+| Judge / LLM-as-judge | 裁判模型 | 让一个模型给产出打主观分；要求裁判不用工具、且比选手强 |
+| Grounding | 据实 | 答案有出处，不凭空编 |
+| RCA | 根因分析 | 从"失败了"倒推到"为什么失败"的四步流程 |
+| Release Gate | 发布门禁 | 上线前的合格线：确定性用例必过 + 裁判分达标，否则不放行 |
+| Smoke test | 冒烟测试 | 最小集快速跑一遍，确认系统没整体崩 |
+| Race | 竞态 | 两个操作抢同一份数据导致的不确定结果（本文指测试并发写入）|
+| Fixture | 测试夹具 | 测试前准备好的固定数据 / 环境 |
+| Completion vs Quality | 完成度 vs 质量 | 0/1 的"做没做完" vs 0–10 的主观"做得好不好" |
+| Capability vs Reliability | 能力 vs 可靠 | 能做多难的活 vs 每次都能做对的稳定度；Agent 评测真正要盯的是后者 |
+| Consistency / Robustness / Calibration | 一致性 / 鲁棒性 / 校准 | 换个说法会不会崩 / 有干扰会不会崩 / 它说"我有 90% 把握"是否真准 |
+| PASS / FAIL | 通过 / 不通过 | 单条用例的判定结果 |
+| Live marker | 联网标记 | 标了它的用例会真打外部 API，默认跳过（省 key 和省钱）|
+| Offline harness | 离线夹具 | 不联网也能跑的评测骨架，用假数据复现整条轨迹 |
+| Baseline / Regression | 基线 / 回归 | 上次的分数作参照；新版本掉分就叫回归 |
+| session_tag | 会话标签 | 给每条记录打上会话标记，事后能按会话把线索串起来 |
+| state.db / JSONL | 状态库 / 行式日志 | 会话状态落 SQLite；每行一条 JSON 的追加式记录文件 |
+| Compare 竞技场 | 对照擂台 | 两个模型跑同一批用例、结果另存，不污染主数据 |
+| Governance | 治理 | 发布前后该拦什么、该记什么、该审计什么 |

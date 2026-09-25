@@ -1,6 +1,6 @@
 # L4 运行时：五方实现对照（深度解析）
 
-> 服务 D4「L4b 运行时选型 + 协同」；同冲刺目录已有一份《运行时选型-LangGraph-vs-Hermes》解决"选哪个"，本文深挖"**它们内部怎么实现的、五个 runtime 横向对照**"。
+> 服务 D4「L4b 运行时选型 + 协同」；同冲刺目录已有一份《运行时选型-LangGraph-vs-Hermes》解决"选哪个"，本文深挖"**它们内部怎么实现的、五个 runtime（运行时） 横向对照**"。
 
 ---
 
@@ -40,20 +40,20 @@
 | 模块 | 主路径 | 行数 | 本文中用作什么 |
 |------|--------|------|---------------|
 | 选型卡 | `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` | 312 | 衔接卡；本文不复述其已写结论 |
-| LangGraph | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\{graph,llm,rag,threads}.py` + `frontend\hitl.py` | 80/106/92/10/183 | **最小可跑成品**：StateGraph + SqliteSaver + HITL；DeepSeek ChatOpenAI + BGE；`@tool` RAG；thread_id 反查；`Command(resume)` |
+| LangGraph | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\{graph,llm,rag,threads}.py` + `frontend\hitl.py` | 80/106/92/10/183 | **最小可跑成品**：StateGraph + SqliteSaver + HITL；DeepSeek ChatOpenAI + BGE；`@tool` RAG；thread_id（线程标识） 反查；`Command(resume)` |
 | 多 Agent | `11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\backend\{graph.py, state.py, runner.py}` | 27/13/126 | 顺序 handoff：flight→hotel→itinerary→final |
-| Hermes 鸟瞰 | `08-hermes-agent\01-arch.md`（§1-§3.3） | 657 | Session 冻结 vs Turn 组装 |
+| Hermes 鸟瞰 | `08-hermes-agent\01-arch.md`（§1-§3.3） | 657 | Session 冻结 vs Turn（轮次） 组装 |
 | Hermes 循环 | `08-hermes-agent\02-run-agent\{README.md, notes\1_agent_loop.md, notes\2_tools_discovery.md, notes\4_run_conversation_callflow.md, hermes_src\agent\conversation_loop.py}` | 248/120/84/367/5355 | call flow + while 骨架 + 三道刹车 + 截胡 + 真源码 prologue/while |
 | Hermes forwarder | `08-hermes-agent\hermes-study\run_agent.py` | 6055（仅头注） | `AIAgent.run_conversation` 是 forwarder（行 24-72） |
 | waku | `12-hermes-agent-small\waku\{loop\agent.py, loop\models.py, runtime\session.py, app.py, db.py, tools\registry.py}` | 113/315/128/103/107/49 | **95 行 while** + 8 provider 桥 + Session 组装 + 装配图 + SQLite+FTS5 + 三件套 registry |
-| waku 入门 | `12-hermes-agent-small\{README.md, docs\architecture.md, learn_guide.md}` | 267/102/608 | 快速开始 + 白板图 + Harness/Loop/Memory/Eval 入门 |
+| waku 入门 | `12-hermes-agent-small\{README.md, docs\architecture.md, learn_guide.md}` | 267/102/608 | 快速开始 + 白板图 + Harness（外壳工程）/Loop/Memory/Eval 入门 |
 | Pi | `13-pi-agent\{00-learn-guide.md, 02-agent-loop.md, 03-events.md, 06-HITL.md}` | 345/598/300/182 | 会话是树 + Prompt 是栈；**三层调用栈** + 双层 while + 事件总线 + HITL 队列 |
-| DSH | `14-deepseek-harness\01.arch.md` | 296 | 5 件 harness + **code vs config** 分水岭 + tool vs skill |
+| DSH | `14-deepseek-harness\01.arch.md` | 296 | 5 件 harness + **code vs config** 分水岭 + tool vs skill（技能） |
 | Multiagent | `04-multiagent\01-single_vs_multi.py` 等 6 个文件 | — | 单 vs 多 / 阶段状态机 / LangGraph 风格 / 任务路由 / 冲突解决 |
 
 ### c) 蒸馏理由与方法（**约 130 字**）
 
-选型卡已答"二选一"，本文**往下挖一层**——把"Runtime = 主循环"这件事在 5 个真实工程里**逐行核对**：①**对照表**给出每个 runtime 的"loop 文件 / 行数 / 状态/HITL/扩展点/可跑性"；②**同循环五种写法**用统一骨架展示五个工程各自的 3–5 行真实伪代码；③**三层递进**：概念（5 件 harness）→ 实现（每个 runtime 关键机制）→ 工程（决策树 + ≥10 条避坑）。所有路径必须**仓库根相对 + 全路径**，所有断言必须**有源文件证据**。
+选型卡已答"二选一"，本文**往下挖一层**——把"Runtime = 主循环"这件事在 5 个真实工程里**逐行核对**：①**对照表**给出每个 runtime 的"loop（主循环） 文件 / 行数 / 状态/HITL/扩展点/可跑性"；②**同循环五种写法**用统一骨架展示五个工程各自的 3–5 行真实伪代码；③**三层递进**：概念（5 件 harness）→ 实现（每个 runtime 关键机制）→ 工程（决策树 + ≥10 条避坑）。所有路径必须**仓库根相对 + 全路径**，所有断言必须**有源文件证据**。
 
 ---
 
@@ -75,7 +75,7 @@
 |---|---|---|
 | 架构 | 容易叠两套循环、状态分裂 | 一套编排骨架 + 另一条以 tool/middleware 形式挂载 |
 | 学习成本 | 两边都学一半，谁都讲不深 | 主攻一个，另一个只需能对比（"为什么不选它"）|
-| 面试表现 | 被追问"两者关系"就卡住 | 能主动讲"互斥替代，避免 harness 重复建设" |
+| 面试表现 | 被追问"两者关系"就卡住 | 能主动讲"互斥替代，避免 harness（外壳工程） 重复建设" |
 | 工程风险 | 状态/人审/持久化各写一套，长期维护地狱 | 状态与人审只有一处真相 |
 
 ### 0.3 失败模式 ASCII 图
@@ -106,14 +106,14 @@
 
 ### 1.0 统一类比：runtime = 城市交通调度中心
 
-**贯穿全文的类比**：一个 runtime 就是一座城市的**交通调度中心**。
+**贯穿全文的类比**：一个 runtime（运行时） 就是一座城市的**交通调度中心**。
 
 | 类比物 | 对应概念 | 本文后续对应章节 |
 |---|---|---|
 | **路网 + 信号灯** | 主循环与停止条件（什么时候走、什么时候停） | §1.4 六步骨架、§3.1–§3.5 五种写法 |
 | **停车场** | 状态/会话持久化（车停哪儿、回来还能找到） | §2.1 对照表"状态/会话怎么存" |
 | **交通工具** | 工具与协议（能开什么车、走哪条路） | §2.1"工具注册怎么做" |
-| **人工交警** | HITL / 审批（关键时刻必须有人点头） | §2.1"HITL 做法"、§5.4 |
+| **人工交警** | HITL（人在环） / 审批（关键时刻必须有人点头） | §2.1"HITL 做法"、§5.4 |
 | **调度规章** | 配置与扩展点（谁能改规则、怎么热更新） | §2.1"扩展点在哪" |
 
 **判定一个 runtime 好不好，就看这五件是否齐备且彼此不打架**——这也正是 §1.2 的"五个必备件"。
@@ -136,10 +136,10 @@
 
 | # | 件 | 解决 | 谁来写 |
 |---|----|------|-------|
-| 1 | **循环（Loop）** | 调模型 ↔ 调工具，循环终止 | framework/harness |
-| 2 | **状态/会话（Session）** | "记得住上下文"——messages 列表、checkpointer、transcript 落盘 | framework/harness |
+| 1 | **循环（Loop（主循环））** | 调模型 ↔ 调工具，循环终止 | framework/harness |
+| 2 | **状态/会话（Session（会话））** | "记得住上下文"——messages 列表、checkpointer（检查点 / 检查点器）、transcript 落盘 | framework/harness |
 | 3 | **工具注册（Tools）** | "模型能调什么"——schema + 执行函数 | **你** |
-| 4 | **停机/预算（Stop）** | "不能转死"——max_iterations、budget、grace、interrupt | framework/harness |
+| 4 | **停机/预算（Stop）** | "不能转死"——max_iterations、budget、grace、interrupt（中断） | framework/harness |
 | 5 | **人审（HITL）** | "人能在哪儿插话/审批"——interrupt、steer、approval、Tool 拦截 | framework/harness 部分 + **你** |
 
 > **关键判断**：①③④ framework 已有；②⑤ 大半 framework 有，但细节（什么时候冻结 SP、interrupt 是阻塞还是入队）每个项目不同。
@@ -218,7 +218,7 @@ function flow（最小循环骨架）
 |---|---|---|
 | **runtime** | 拥有"循环 + 状态 + 工具 + 停机 + 人审"的能力层 | §1.1 六层栈定位 |
 | **harness** | 装这些件的盒子（系统提示词、注册表、权限、沙箱、日志） | §1.2 |
-| **loop / 内循环** | 一次 turn 内"调模型 → 是否要工具 → 执行 → 回灌"的反复 | §1.4、§3.x |
+| **loop / 内循环** | 一次 turn（轮次） 内"调模型 → 是否要工具 → 执行 → 回灌"的反复 | §1.4、§3.x |
 | **turn / session** | turn = 一问一答；session = 跨 turn 长生命周期（SP 冻结于此） | §2.1 |
 | **checkpointer / thread_id** | 状态持久化与线程标识（= 类比里的"停车场车位号"） | §3.1 |
 | **interrupt / HITL** | 图内中断 + 人审放行（= "人工交警"） | §2.1、§5.4 |
@@ -252,10 +252,10 @@ graph TD
 
 | 列 | **LangGraph** | **Hermes（真源码）** | **waku（小 harness）** | **Pi（TypeScript）** | **DSH（DeepSeek Harness）** |
 |---|---|---|---|---|---|
-| **是什么** | 图编排**库**：你写 State/Node/Edge | 成品**harness**（Python）：自带循环/SP 组装/Tools/Memory/Gateway | 最小可读 harness（约 1/100 代码量）：本地优先个人助手 | 极简 Core + Interactive 双层（TS）；UI/TUI/RPC/SDK 都进同一 Core | 配置驱动 harness（仓库内仅一篇 `01.arch.md`）；"code vs config"是分水岭 |
+| **是什么** | 图编排**库**：你写 State/Node/Edge | 成品**harness**（Python）：自带循环/SP 组装/Tools/Memory/Gateway（网关） | 最小可读 harness（约 1/100 代码量）：本地优先个人助手 | 极简 Core + Interactive 双层（TS）；UI/TUI/RPC/SDK 都进同一 Core | 配置驱动 harness（仓库内仅一篇 `01.arch.md`）；"code vs config"是分水岭 |
 | **loop 在哪个文件** | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:73-80`（图编排：`add_conditional_edges("chat_node", tools_condition)`） | `08-hermes-agent\02-run-agent\hermes_src\agent\conversation_loop.py:643`（真 while 入口）；**forwarder** 见 `08-hermes-agent\hermes-study\run_agent.py` 头注（`run_conversation` 是薄转发） | `12-hermes-agent-small\waku\loop\agent.py:62-112`（≈95 行 `for i in 1..max_iterations`） | `13-pi-agent\02-agent-loop.md:265-297`（双层 while：内层消化 tool+steering、外层消化 follow-up） | `14-deepseek-harness\01.arch.md:21-56`（`Agent Loop` 思维图，无源码；D4 内**只有文档**） |
-| **状态/会话怎么存** | `SqliteSaver` + `thread_id`：`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:70-71` 建连接 → `chatbot.compile(checkpointer=checkpoint)`；`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py:7-9` 用 `checkpoint.list(None)` 反查所有 thread_id | SQLite transcript：每 Turn 落库（`SessionDB`），SP **Session 启动时冻结**（`08-hermes-agent\01-arch.md:181-201`） | 单文件 SQLite + FTS5：`12-hermes-agent-small\waku\db.py:12-76` 建 `state.db`（含 `facts_fts` / `episodes_fts` / `chat_log`），自动迁移（`:79-95`） | **会话是树**：JSONL + `parentId`（`13-pi-agent\00-learn-guide.md:9-65`），`/tree` 同文件切枝、`/fork`/`/clone` 新文件 | 配置 + 配置驱动的"每轮重新组装"（`14-deepseek-harness\01.arch.md:182-217`），持久化在文档中**未给出**实现级路径（推断：靠自身 store） |
-| **工具注册怎么做** | LangChain `@tool` 装饰器：`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\rag.py:53-92` 的 `rag_tool`；图用 `ToolNode(tools)`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:68`） | `08-hermes-agent\02-run-agent\hermes_src\tools\*.py` import 时 `registry.register(...)` → `discover_builtin_tools` → `toolsets._HERMES_CORE_TOOLS`；循环只消费 schema（`08-hermes-agent\02-run-agent\notes\2_tools_discovery.md:18-67`） | `ToolRegistry.register(Tool)` + `execute(name, args)`（`12-hermes-agent-small\waku\tools\registry.py:30-49`）；失败转文本不抛（`:46-48`） | `executeToolCalls`：`prepare→execute→finalize`；并行/串行由 `executionMode` 控制（`13-pi-agent\02-agent-loop.md:380-407`） | **Tool ≠ Skill**（`14-deepseek-harness\01.arch.md:229-270`）：Tool=函数、确定性返回；Skill=Agent 自己执行流程，烧 token |
+| **状态/会话怎么存** | `SqliteSaver` + `thread_id`：`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:70-71` 建连接 → `chatbot.compile(checkpointer=checkpoint)`；`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py:7-9` 用 `checkpoint.list(None)` 反查所有 thread_id（线程标识） | SQLite transcript（对话记录）：每 Turn 落库（`SessionDB`），SP **Session 启动时冻结**（`08-hermes-agent\01-arch.md:181-201`） | 单文件 SQLite + FTS5：`12-hermes-agent-small\waku\db.py:12-76` 建 `state.db`（含 `facts_fts` / `episodes_fts` / `chat_log`），自动迁移（`:79-95`） | **会话是树**：JSONL + `parentId`（`13-pi-agent\00-learn-guide.md:9-65`），`/tree` 同文件切枝、`/fork`/`/clone` 新文件 | 配置 + 配置驱动的"每轮重新组装"（`14-deepseek-harness\01.arch.md:182-217`），持久化在文档中**未给出**实现级路径（推断：靠自身 store） |
+| **工具注册怎么做** | LangChain `@tool` 装饰器：`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\rag.py:53-92` 的 `rag_tool`；图用 `ToolNode(tools)`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:68`） | `08-hermes-agent\02-run-agent\hermes_src\tools\*.py` import 时 `registry.register(...)` → `discover_builtin_tools` → `toolsets._HERMES_CORE_TOOLS`；循环只消费 schema（`08-hermes-agent\02-run-agent\notes\2_tools_discovery.md:18-67`） | `ToolRegistry.register(Tool)` + `execute(name, args)`（`12-hermes-agent-small\waku\tools\registry.py:30-49`）；失败转文本不抛（`:46-48`） | `executeToolCalls`：`prepare→execute→finalize`；并行/串行由 `executionMode` 控制（`13-pi-agent\02-agent-loop.md:380-407`） | **Tool ≠ Skill（技能）**（`14-deepseek-harness\01.arch.md:229-270`）：Tool=函数、确定性返回；Skill=Agent 自己执行流程，烧 token |
 | **人审（HITL）怎么做** | `interrupt` + `Command(resume=…)`：在节点里抛 `Interrupt`，恢复用 `Command`；Streamlit 侧用 `chatbot.get_state(config)` 拿 `state_snapshot.interrupts`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend\hitl.py:11-45, 89-183`） | 多种入口：`/stop` interrupt、todo 截胡、approval/clarify gateway 命令、`08-hermes-agent\09-lang-serial-not\README.md` §7 | **waku 没有专用审批**：靠 streamlit/`frontend` 层自己接，**Core 本身不弹窗**（推断：见 Pi 同款设计哲学） | **Core 无审批弹窗**：① 队列纠偏 `steer()` / `followUp()`；② 扩展 `beforeToolCall` 拦截；③ UI `await ui.select`（`13-pi-agent\06-HITL.md:15-90`） | 文档未明确（推断）：code 路径可以"自我修改"——Human 退到旁路靠 Eval + Release Gate（`14-deepseek-harness\01.arch.md:140-178`） |
 | **记忆怎么管** | `messages: Annotated[list, add_messages]` 累加；`store`/`checkpointer` 可选；`threads.py` 侧边栏 = `checkpoint.list(None)`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py:1-10`） | 三层：① SOUL/user.md/memory.md **Session 启动冻结**（`08-hermes-agent\01-arch.md:175-201`）；② SQLite transcript；③ 可选 External（mem0/Honcho/SuperMemory） | 三支柱+两道工序：semantic/episodic/procedural + **retrieval_gate**（先问要不要）+ **consolidation**（每 N 轮蒸馏，`12-hermes-agent-small\waku\runtime\session.py:64-89`） | **Prompt 是栈**：default → `APPEND_SYSTEM.md` → `AGENTS.md`/`CLAUDE.md` → skills → cwd（`13-pi-agent\00-learn-guide.md:67-118`） | 配置驱动；Agent 可改自身配置再热重载（`14-deepseek-harness\01.arch.md:144-217`）；具体"记忆三轨"未在文档中给出（推断） |
 | **扩展点在哪** | 子图（subgraph）+ `interrupt` + LangSmith | Plugin（`~/.hermes/plugins/`）+ MemoryProvider ABC + skill + MCP | MCP 桥（`12-hermes-agent-small\waku\tools\mcp_client.py` 路径，`12-hermes-agent-small\README.md` §"Loop · Tools"）+ extras（`[voice]`/`[telegram]`/`[mcp]`） | **Extensions** 六类钩子：tools/commands/events/UI/providers/state（`13-pi-agent\00-learn-guide.md:172-201`） | "每一块都是插件，包括 Loop"（`14-deepseek-harness\01.arch.md:138-142`） |
@@ -311,7 +311,7 @@ while (api_call_count < agent.max_iterations and agent.iteration_budget.remainin
 1. **三层结构 = Prologue + While + Finalize**（`notes\4_run_conversation_callflow.md:14-122`）：①Prologue `build_turn_context`（冻结 SP + history + 本轮 user）；②While `:643`；③Finalize `finalize_turn` 落库。
 2. **三道刹车**（`notes\1_agent_loop.md:69-77`）：`max_iterations` / `IterationBudget`（可 consume/refund）/ `_budget_grace_call`（预算用尽再给 1 次）/ `_interrupt_requested`（`/stop`）。
 3. **截胡**（`notes\4_run_conversation_callflow.md:185-205`）：`todo`/`memory` **两边都要 register + agent 级截胡**——`registry 登记 ≠ 截胡`：截胡只在执行时生效。
-4. **Prompt Cache 神圣**（上游 AGENTS.md §"Prompt Caching Must Not Break"）：中途不动 SP、不换 toolset、不重建 system；例外是 compression。`01-arch.md:181-201` 解释 Session 冻结原因。
+4. **Prompt Cache 神圣**（上游 AGENTS.md §"Prompt Caching Must Not Break"）：中途不动 SP、不换 toolset（工具集）、不重建 system；例外是 compression（历史压缩）。`01-arch.md:181-201` 解释 Session 冻结原因。
 5. **arch 演变**：旧 `run_agent.py` 上万行；新循环抽到 `conversation_loop.py`，`run_agent.AIAgent.run_conversation` **只剩 forwarder**（`hermes-study\run_agent.py:24-72` 头注）。
 
 #### 2.2.3 waku：95 行 while + gate/consolidation + provider 桥
@@ -369,7 +369,7 @@ runLoop(context, newMessages, config):
     break                                                  # ⑥ 停门 4：模型决定停
 ```
 
-**核心机制**：①**三层调用栈**（`02-agent-loop.md:24-96`）`runLoop` 无状态 + `Agent` 有状态（transcript/queue/abort）+ `AgentSession` 产品层；②**Core 停机四道门**（`:488-535`）①error/aborted 立刻退 ②整批 terminate 不续 LLM ③`shouldStopAfterTurn()` 跳队列 ④队列空+无 tool 正常 `agent_end`；③**Interactive 兜底**（`:539-571`）`_handlePostAgentRun` retry/compact/queued；④**HITL = 队列 + 拦截**（`06-HITL.md:1-100`）Core 不弹窗，靠 steering/follow-up + `beforeToolCall` + `await ui.select`；⑤**Prompt 是栈**（`00-learn-guide.md:67-118`）default → `APPEND_SYSTEM.md` → `AGENTS.md`/`CLAUDE.md` → skills → cwd；⑥**会话是树**（`:9-65`）JSONL + `parentId`，`/tree` 同文件切枝、`/fork`/`/clone` 新文件；⑦**事件总线**（`03-events.md:1-85`）Core 发 `AgentEvent`，JSONL 在 `message_end` 追加。
+**核心机制**：①**三层调用栈**（`02-agent-loop.md:24-96`）`runLoop` 无状态 + `Agent` 有状态（transcript/queue/abort（中断信号））+ `AgentSession` 产品层；②**Core 停机四道门**（`:488-535`）①error/aborted 立刻退 ②整批 terminate 不续 LLM ③`shouldStopAfterTurn()` 跳队列 ④队列空+无 tool 正常 `agent_end`；③**Interactive 兜底**（`:539-571`）`_handlePostAgentRun` retry/compact/queued；④**HITL = 队列 + 拦截**（`06-HITL.md:1-100`）Core 不弹窗，靠 steering/follow-up + `beforeToolCall` + `await ui.select`；⑤**Prompt 是栈**（`00-learn-guide.md:67-118`）default → `APPEND_SYSTEM.md` → `AGENTS.md`/`CLAUDE.md` → skills → cwd；⑥**会话是树**（`:9-65`）JSONL + `parentId`，`/tree` 同文件切枝、`/fork`/`/clone` 新文件；⑦**事件总线**（`03-events.md:1-85`）Core 发 `AgentEvent`，JSONL 在 `message_end` 追加。
 
 #### 2.2.5 DSH：code vs config + Tool vs Skill + 全件可换
 
@@ -561,10 +561,10 @@ function flow（DSH：每步重新组装）
 ### 4.2 避坑清单（≥10 条，每条结论 + 证据）
 
 1. **叠两套循环**——LangGraph 上层再来个 `while`（`backend\graph.py:73-80` 已把循环交给图；只需写节点）。证据：选型卡 §1.1 同层二选一。
-2. **把 checkpoint 当记忆**——`SqliteSaver` 存 messages+state；要"事实/程序性记忆"得另开表（waku `state.db` 拆 `facts`/`episodes`/`chat_log`，`waku\db.py:12-76`）。
-3. **子 Agent 上下文污染**——多 Agent handoff 不挂 thread_id 会污染主 thread（`11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\backend\runner.py:46-53` 用 `thread_id` 隔离）。
+2. **把 checkpoint（检查点 / 检查点器） 当记忆**——`SqliteSaver` 存 messages+state；要"事实/程序性记忆"得另开表（waku `state.db` 拆 `facts`/`episodes`/`chat_log`，`waku\db.py:12-76`）。
+3. **子 Agent 上下文污染**——多 Agent handoff（移交） 不挂 thread_id 会污染主 thread（`11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\backend\runner.py:46-53` 用 `thread_id` 隔离）。
 4. **无停机条件**——`while True` 没 `max_iterations`/interrupt/budget 就死循环（Hermes 三道刹车 `notes\1_agent_loop.md:69-77` + Pi 四道门 `02-agent-loop.md:488-535`）。
-5. **中途改 SP / 换 toolset / 重建 system**——破 prompt cache（Hermes AGENTS.md §"Prompt Caching Must Not Break"）。
+5. **中途改 SP / 换 toolset（工具集） / 重建 system**——破 prompt cache（Hermes AGENTS.md §"Prompt Caching Must Not Break"）。
 6. **把 demo 当生产**——`state.db` 默认单线程，dashboard 多线程要 `check_same_thread=False` + `PRAGMA busy_timeout=3000`（`waku\db.py:99-104`）。
 7. **tool schema 全量下发 = 隐性成本**——Hermes "Footprint Ladder"警告：新能力优先 CLI/skill/plugin/MCP（上游 AGENTS.md）。
 8. **把 todo 当普通 tool 走 registry.dispatch**——会丢 agent 级 in-memory 状态，必须**截胡**（`notes\4_run_conversation_callflow.md:185-205`）。

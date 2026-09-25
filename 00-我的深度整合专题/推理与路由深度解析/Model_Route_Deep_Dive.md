@@ -26,10 +26,10 @@
 | 场景 | 没有 L1 层 | 有 L1 层 |
 |------|-----------|----------|
 | **换模型** | 全仓搜 `gpt-4o` 字符串 → 200 处 replace → 上线后某处忘改 → 错误答案 | 改 `PRICE_PER_1M` 表 + `FALLBACK_CHAIN` 两行 → `route_by_complexity` 自动生效 |
-| **下游 5xx** | 调用阻塞 → 用户长时间转圈 → 超时后白屏 | 熔断器跳闸 → 1 秒内切到 fallback → 静态模板兜底 → 用户看到"服务繁忙请重试" |
+| **下游 5xx** | 调用阻塞 → 用户长时间转圈 → 超时后白屏 | 熔断器跳闸 → 1 秒内切到 fallback（降级） → 静态模板兜底 → 用户看到"服务繁忙请重试" |
 | **重复 prompt** | 同样的"什么是 RAG"被调 1000 次 → 每次实付 $0.002 | 第一次实调、第 2~1000 次 SHA256 命中精确缓存 → 单条成本降 1000× |
 | **月底对账** | "这个月花了 $5000" → 没人能回答"哪个 prompt 烧的" | `ledger.records` 每条带 `request_id / model / tokens / cost / degraded`，可按任何维度切片 |
-| **调错模型** | 把 `gpt-4o-mini` 的输出当 `gpt-4o-pro` 用 → 用户抱怨质量差没人知道 | `attributes.model` 写在 Span 里 → 看 trace 立刻定位 → 调路由 |
+| **调错模型** | 把 `gpt-4o-mini` 的输出当 `gpt-4o-pro` 用 → 用户抱怨质量差没人知道 | `attributes.model` 写在 Span（跨度） 里 → 看 trace（追踪） 立刻定位 → 调路由 |
 
 ### 失败模式 ASCII：无路由 / 无熔断 / 无缓存 / 无计费时怎么炸
 
@@ -59,7 +59,7 @@
 
 ---
 
-> 把 `05-model-route/` 11 个模块 + `07-llm_from_scrach/` 中三个底层概念（**KV cache / MoE / GRPO**）蒸馏成一份"面试能讲 + 本仓库有实证"的 L1 推理层专题。
+> 把 `05-model-route/` 11 个模块 + `07-llm_from_scrach/` 中三个底层概念（**KV cache（键值缓存） / MoE（混合专家） / GRPO**）蒸馏成一份"面试能讲 + 本仓库有实证"的 L1 推理层专题。
 >
 > **统一类比（贯穿全文）**：**"模型调用 = 跑长途"**——选车（模型选型）、上高速（路由）、进收费站（熔断+重试）、堵车换国道（降级）、加油站便利店（缓存）、ETC 对账（计费）、高速出口安检（幻觉治理）。**L1 推理层 = 整套"出行调度系统"**，目标是把每一次模型调用变得**可控、可观测、可降级、可计费**。
 >
@@ -72,7 +72,7 @@
 
 ### a) 在计划中的位置
 
-本页服务于 **5 日冲刺 D3** 的 **「上午 09:00–12:00 推理 + 动作时间盒」前半段**，对应**六层栈的 L1 推理层（模型 · 引擎 · 路由 · 成本）**。D3 下午会衔接 L3 动作层（工具调用 + 权限 + 审计），由 `05-model-route\08\guard\` 三件套承担；D5 收口时 L1 的 trace 与 L2 记忆、L4 运行时、L5 观测一起被纳入"可观测闭环"。
+本页服务于 **5 日冲刺 D3** 的 **「上午 09:00–12:00 推理 + 动作时间盒」前半段**，对应**六层栈的 L1 推理层（模型 · 引擎 · 路由 · 成本）**。D3 下午会衔接 L3 动作层（工具调用 + 权限 + 审计），由 `05-model-route\08\guard\` 三件套承担；D5 收口时 L1 的 trace（追踪） 与 L2 记忆、L4 运行时、L5 观测一起被纳入"可观测闭环"。
 
 ### b) 被蒸馏源明细
 
@@ -83,34 +83,34 @@
 | 01 | `05-model-route\README.md` | 52 | **框架文件**：自带"面试清单→代码映射"表，把 11 个模块压成 8 行清单；含闭环 ASCII |
 | 02 | `05-model-route\01\main.py` | 60 | 熔断器三个场景演示（偶发自愈 / 连续失败跳闸 / OPEN 期拒绝） |
 | 03 | `05-model-route\01\breaker\circuit_breaker.py` | 61 | `CircuitBreaker` 数据类 + 三态机 + `half_open_max_calls` 半开限流 |
-| 04 | `05-model-route\01\breaker\retry.py` | 27 | `call_with_breaker_and_retry`：retry 与 breaker 串接 |
+| 04 | `05-model-route\01\breaker\retry.py` | 27 | `call_with_breaker_and_retry`：retry（重试） 与 breaker 串接 |
 | 05 | `05-model-route\01\breaker\backoff.py` | 6 | **6 行**指数退避 `base * 2**attempt + jitter`，cap 默认 8s |
 | 06 | `05-model-route\01\breaker\state.py` | 7 | 三态枚举（CLOSED / OPEN / HALF_OPEN） |
 | 07 | `05-model-route\02\main.py` + `05-model-route\02\cache\{exact_cache,fingerprint,tokens}.py` | 55/19/7/11 | tiktoken 估算 + SHA256 精确缓存键 + `lru_cache` 演示 |
 | 08 | `05-model-route\03\main.py` + `05-model-route\03\runtime\{limited_call,two_level_cache}.py` | 81/12/20 | `asyncio.Semaphore` 限并发 + L1 进程内 / L2 Redis 双层缓存 |
 | 09 | `05-model-route\04\main.py` + `05-model-route\04\agent\{stub,fake_llm}.py` + `05-model-route\04\tests\test_agent.py` | 22/13/6/18 | `FakeLLM` 按顺序返回 + pytest 集成测 |
-| 10 | `05-model-route\05\main.py` + `05-model-route\05\pipeline\{router,fallback,invoke,billing}.py` | 50/17/58/46/41 | **闭环主线**：路由 → breaker+retry → fallback 链 → ledger 记账 |
+| 10 | `05-model-route\05\main.py` + `05-model-route\05\pipeline\{router,fallback,invoke,billing}.py` | 50/17/58/46/41 | **闭环主线**：路由 → breaker+retry → fallback 链 → ledger（账本） 记账 |
 | 11 | `05-model-route\06\main.py` + `05-model-route\06\billing\{estimate,reconcile}.py` | 36/16/35 | 本地估算 vs API usage 对账，diff > 10% 告警 |
-| 12 | `05-model-route\07\main.py` + `05-model-route\07\trace\{collector,kinds}.py` | 55/58/13 | 9 种 SpanKind：ROUTE/LLM/CACHE/BREAKER/RETRY/FALLBACK/RETRIEVE/BILLING/TOOL |
-| 13 | `05-model-route\08\main.py` + `05-model-route\08\guard\{schema,whitelist,executor}.py` | 52/41/10/27 | 工具调用三道闸：白名单 → Schema → 审计（L3 动作层铺垫） |
+| 12 | `05-model-route\07\main.py` + `05-model-route\07\trace\{collector,kinds}.py` | 55/58/13 | 9 种 SpanKind（跨度类型）：ROUTE/LLM/CACHE/BREAKER/RETRY/FALLBACK/RETRIEVE/BILLING（计费）/TOOL |
+| 13 | `05-model-route\08\main.py` + `05-model-route\08\guard\{schema,whitelist,executor}.py` | 52/41/10/27 | 工具调用三道闸：白名单 → Schema（结构校验） → 审计（L3 动作层铺垫） |
 | 14 | `05-model-route\09\main.py` + `05-model-route\09\deploy\{blue_green,canary}.py` | 26/23/14 | **金丝雀** = `md5(user_id)%100 < pct`；**蓝绿** = 整包切、双倍资源 |
-| 15 | `05-model-route\10\main.py` + `05-model-route\10\cache\{exact,semantic,risks}.py` | 39/13/37/6 | 精确缓存 vs **Jaccard** 演示型语义缓存 + 4 条风险 |
-| 16 | `05-model-route\11\main.py` + `05-model-route\11\governance\{before,during,after}.py` | 67/20/34/27 | **幻觉治理三段式**：RAG grounding → Citation 拒答 → 反馈审计 |
+| 15 | `05-model-route\10\main.py` + `05-model-route\10\cache\{exact,semantic,risks}.py` | 39/13/37/6 | 精确缓存 vs **Jaccard（杰卡德相似度）** 演示型语义缓存 + 4 条风险 |
+| 16 | `05-model-route\11\main.py` + `05-model-route\11\governance\{before,during,after}.py` | 67/20/34/27 | **幻觉治理三段式**：RAG grounding（有据） → Citation（引用） 拒答 → 反馈审计 |
 
 #### 模型底层（`07-llm_from_scrach/`，概念卡用）
 
 | # | 源文件 | 行数 | 主旨 |
 |---|--------|------|------|
-| 17 | `07-llm_from_scrach\README.md` + `07-llm_from_scrach\README_cn.md` | 76/128 | 课程大纲 0–9 Part：基础 → Transformer → 训练 → KV cache → MoE → SFT/RM/PPO/GRPO |
+| 17 | `07-llm_from_scrach\README.md` + `07-llm_from_scrach\README_cn.md` | 76/128 | 课程大纲 0–9 Part：基础 → Transformer → 训练 → KV cache → MoE（混合专家） → SFT（监督微调）/RM/PPO/GRPO |
 | 18 | `07-llm_from_scrach\part_1\README.md` + `07-llm_from_scrach\part_1\tokenizer.py` + `07-llm_from_scrach\part_1\attn_mask.py` + `07-llm_from_scrach\part_1\demo_mha_shapes.py` | 275/60/22/61 | 字节级分词（vocab_size=256）+ 因果掩码 + 多头 attention shape 链路 |
 | 19 | `07-llm_from_scrach\part_3\kv_cache.py` | 243 | **核心实证**：无 cache 累计 1+2+3+4=10；有 cache 每步只算 1；附 `RollingKV` 滑动窗口 + sink |
-| 20 | `07-llm_from_scrach\part_5\README.md` + `07-llm_from_scrach\part_5\moe.py` + `07-llm_from_scrach\part_5\gating.py` | 41/238/188 | MoE = TopK 门控（importance × load 负载均衡 aux loss） + n_expert 个 ExpertMLP，每 token 只激活 top-k |
-| 21 | `07-llm_from_scrach\part_9\GRPO_TRAINING_EXPLANATION.md` + `07-llm_from_scrach\part_9\grpo_loss.py` | 291/97 | **GRPO = PPO 裁剪 + 组内相对优势 + KL 显式惩罚**；无需 value head |
-| 22 | `07-llm_from_scrach\part_6\train_sft.py` 头部 + `07-llm_from_scrach\part_7\train_rm.py` 头部 + `07-llm_from_scrach\part_8\ppo_loss.py` 头部 | 50/50/60 | SFT 走 `dataset_sft + collator_sft`；RM 走 Bradley-Terry / Margin Ranking；PPO 含 `vf_coef` 价值损失 |
+| 20 | `07-llm_from_scrach\part_5\README.md` + `07-llm_from_scrach\part_5\moe.py` + `07-llm_from_scrach\part_5\gating.py` | 41/238/188 | MoE = TopK 门控（importance × load 负载均衡 aux loss） + n_expert（专家个数） 个 ExpertMLP，每 token 只激活 top-k（取前 k 个） |
+| 21 | `07-llm_from_scrach\part_9\GRPO_TRAINING_EXPLANATION.md` + `07-llm_from_scrach\part_9\grpo_loss.py` | 291/97 | **GRPO（省显存的 PPO 变体） = PPO（强化学习优化） 裁剪 + 组内相对优势 + KL 显式惩罚**；无需 value head |
+| 22 | `07-llm_from_scrach\part_6\train_sft.py` 头部 + `07-llm_from_scrach\part_7\train_rm.py` 头部 + `07-llm_from_scrach\part_8\ppo_loss.py` 头部 | 50/50/60 | SFT（监督微调） 走 `dataset_sft + collator_sft`；RM 走 Bradley-Terry / Margin Ranking；PPO 含 `vf_coef` 价值损失 |
 
 ### c) 蒸馏理由与方法（≈130 字）
 
-`05-model-route/` 是仓库里"工程化最稠密"的一段——11 个模块都围绕同一句断言："**一次模型调用 ≠ 一次 `client.chat.completions.create()`**"。蒸馏方法：**（1）先用 README 的"面试清单↔代码映射"定骨架**；**（2）把 11 个模块按"机制"而非"编号"重排为 4 条主线（保护 / 缓存 / 成本 / 观测）+ 治理 / 部署两个外挂**；**（3）KV cache / MoE / GRPO 三段只取"面试够用"的机制 + 仓库里真读到的公式与代码行**，不补全外部论文细节。`(课程观点)` 标注作者主观判断；`(推断)` 标注我自己的外推。
+`05-model-route/` 是仓库里"工程化最稠密"的一段——11 个模块都围绕同一句断言："**一次模型调用 ≠ 一次 `client.chat.completions.create()`**"。蒸馏方法：**（1）先用 README 的"面试清单↔代码映射"定骨架**；**（2）把 11 个模块按"机制"而非"编号"重排为 4 条主线（保护 / 缓存 / 成本 / 观测）+ 治理 / 部署两个外挂**；**（3）KV cache / MoE / GRPO（省显存的 PPO 变体） 三段只取"面试够用"的机制 + 仓库里真读到的公式与代码行**，不补全外部论文细节。`(课程观点)` 标注作者主观判断；`(推断)` 标注我自己的外推。
 
 ---
 
@@ -143,7 +143,7 @@
 | **缓存** | `05-model-route\02\cache\exact_cache.py:10` 精确 + `05-model-route\03\runtime\two_level_cache.py:1` 双层 + `05-model-route\10\cache\semantic.py:15` 语义 | L1 / L2 / 语义三档 | 模块 02/03/10 |
 | **成本治理** | `05-model-route\05\pipeline\billing.py:5` `PRICE_PER_1M` + `05-model-route\06\billing\reconcile.py:15` | before 预算 / during 记账 / after 对账告警 | 模块 05 + 06 |
 | **可观测** | `05-model-route\07\trace\kinds.py:4` `SpanKind` 9 种 | SpanKind 把每次调用拆成可追踪单元 | 模块 07 |
-| **幻觉治理** | `05-model-route\11\governance\{before,during,after}.py` | RAG grounding → Citation 拒答 → 反馈审计 | 模块 11 |
+| **幻觉治理** | `05-model-route\11\governance\{before,during,after}.py` | RAG grounding → Citation（引用） 拒答 → 反馈审计 | 模块 11 |
 | **部署策略** | `05-model-route\09\deploy\{blue_green,canary}.py` | 蓝绿整包切 vs 金丝雀小流量探 | 模块 09 |
 | **工具权限** | `05-model-route\08\guard\{whitelist,schema,executor}.py` | L3 动作层的事，提前在 L1 也能说"调用入口受控" | 模块 08 |
 
@@ -171,7 +171,7 @@
 | **本地直调**（CPU 友好） | 个人开发、隐私场景、流量小 | `05-model-route\02\cache\exact_cache.py:6` `_STORE` 内存 dict + `05-model-route\03\runtime\two_level_cache.py:3` `self.l1 = {}` 全进程内 |
 | **并发服务化**（多用户） | SaaS、生产 | `05-model-route\03\main.py:18` `CONCURRENCY = 2` + `05-model-route\03\runtime\limited_call.py:5` `asyncio.Semaphore` |
 
-> **避坑**：`asyncio.Semaphore(N)` 是**"任意时刻最多 N 个协程在跑下游"**，不是"N QPS"——高 QPS 还得加 token bucket（仓库未实现，**课程观点：生产应补**）。
+> **避坑**：`asyncio.Semaphore(N)` 是**"任意时刻最多 N 个协程在跑下游"**，不是"N QPS（每秒查询数）"——高 QPS 还得加 token bucket（仓库未实现，**课程观点：生产应补**）。
 
 ### 1.4 路由的本质：成本 vs 智商的两难
 
@@ -202,10 +202,10 @@
 | 档位 | 命中率 | 一致性风险 | 仓库出处 |
 |------|--------|-----------|----------|
 | **精确缓存**（按 prompt hash） | 低 | 几乎零（SHA256 撞上才出问题） | `05-model-route\02\cache\fingerprint.py:5` |
-| **L1/L2 双层**（进程 + Redis） | 高 | 分布式一致性要靠 Redis TTL | `05-model-route\03\runtime\two_level_cache.py:1` |
+| **L1/L2 双层**（进程 + Redis） | 高 | 分布式一致性要靠 Redis TTL（存活时间） | `05-model-route\03\runtime\two_level_cache.py:1` |
 | **语义缓存**（向量 + 阈值） | 很高 | **答非所问** | `05-model-route\10\cache\semantic.py:15`，`05-model-route\10\cache\risks.py:1` 4 条风险 |
 
-> **关键洞察**：`05-model-route\10\cache\risks.py:1` 列了 4 条风险——**答非所问、过期知识、租户串数据、幻觉放大**——都是"语义缓存 + 没兜底"的真实事故模式。**仓库观点：能用精确就别上语义；非要上，必须按 tenant 隔离 key + 短 TTL**。
+> **关键洞察**：`05-model-route\10\cache\risks.py:1` 列了 4 条风险——**答非所问、过期知识、租户串数据、幻觉放大**——都是"语义缓存 + 没兜底"的真实事故模式。**仓库观点：能用精确就别上语义；非要上，必须按 tenant（租户） 隔离 key + 短 TTL**。
 
 ### 1.6 成本治理的"事前 / 事中 / 事后"
 
@@ -291,7 +291,7 @@
 | `ledger` / `records` | 账本与条目列表 | `05-model-route\05\pipeline\billing.py:23` |
 | `usage` | API 回写的真实 token 数 | `05-model-route\06\billing\estimate.py:10` |
 | `Span` | 一段带属性的操作记录 | `05-model-route\07\trace\collector.py:10` |
-| `SpanKind` | 9 种枚举（ROUTE/LLM/CACHE/BREAKER/RETRY/FALLBACK/RETRIEVE/BILLING/TOOL） | `05-model-route\07\trace\kinds.py:4-12` |
+| `SpanKind` | 9 种枚举（ROUTE/LLM/CACHE/BREAKER/RETRY/FALLBACK/RETRIEVE/BILLING（计费）/TOOL） | `05-model-route\07\trace\kinds.py:4-12` |
 | `cache.l1` / `cache._l2_mock` | L1 进程内 dict / L2 远端 Redis（演示用 mock） | `05-model-route\03\runtime\two_level_cache.py:3-5` |
 | `PRICE_PER_1M` | 每百万 token 单价表 | `05-model-route\05\pipeline\billing.py:5-10` |
 | `TTL` | Time-to-Live，缓存过期秒数 | `05-model-route\03\runtime\two_level_cache.py:16` 默认 300 |
@@ -330,7 +330,7 @@ flowchart TD
 
 ### 2.1 主线 A：保护机制——熔断 + 重试 + 退避
 
-**机制**：对一次 `fn()` 调用，先看熔断器放不放行（`allow()`），放行加一并发计数（`before_call`），成功计一次成功、失败计一次失败，连续失败超阈值就跳闸；每次失败后**指数退避 + jitter** 等一拍再试。
+**机制**：对一次 `fn()` 调用，先看熔断器放不放行（`allow()`），放行加一并发计数（`before_call`），成功计一次成功、失败计一次失败，连续失败超阈值就跳闸；每次失败后**指数退避 + jitter（抖动）** 等一拍再试。
 
 ```text
 fn call_with_breaker_and_retry(fn, breaker, max_retries):
@@ -509,8 +509,8 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 | 概念 | 一句话 | 仓库证据 |
 |------|--------|----------|
 | **KV cache** | 老 token 的 K/V 不变所以缓存，新 token 只算自己的；累计从 O(n²) 降到 O(n)；长上下文用 `RollingKV(window, sink)` 截断 | `07-llm_from_scrach\part_3\kv_cache.py:33-70` + `:150` |
-| **MoE** | n_expert 个 MLP，每 token 只走 top-k；参数量 ×n，每 token FLOPs ×1；负载均衡靠 `aux_loss = E × Σ(importance × load)` | `07-llm_from_scrach\part_5\gating.py:28-83` + `07-llm_from_scrach\part_5\moe.py:52-101` |
-| **GRPO** | 砍掉 value head，用组内相对优势 `A_i = r_i − μ_group` 代替 GAE；KL 显式加 loss（`total = policy_loss + kl_coef × kl_ref`）；G=4~8 | `07-llm_from_scrach\part_9\grpo_loss.py:21-65` |
+| **MoE** | n_expert 个 MLP，每 token 只走 top-k（取前 k 个）；参数量 ×n，每 token FLOPs（浮点运算量） ×1；负载均衡靠 `aux_loss = E × Σ(importance × load)` | `07-llm_from_scrach\part_5\gating.py:28-83` + `07-llm_from_scrach\part_5\moe.py:52-101` |
+| **GRPO** | 砍掉 value head，用组内相对优势 `A_i = r_i − μ_group` 代替 GAE（广义优势估计）；KL 显式加 loss（`total = policy_loss + kl_coef × kl_ref`）；G=4~8 | `07-llm_from_scrach\part_9\grpo_loss.py:21-65` |
 
 > **课程观点**：GRPO 不是"另一种 RL 算法"，而是"**砍掉 value head 后 PPO 的工程简化**"。
 
@@ -531,7 +531,7 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 | 11 | 工具调用三道闸顺序？ | 白名单 → Schema → 审计（`05-model-route\08\guard\executor.py:24-26`） |
 | 12 | 幻觉治理三段是什么？ | 事前 grounding（`05-model-route\11\governance\before.py:18`）+ 事中 citation/置信度（`05-model-route\11\governance\during.py:12`）+ 事后反馈审计（`05-model-route\11\governance\after.py:20`） |
 | 13 | KV cache 为什么能让推理变快？ | 老 token 的 K/V 不变，缓存起来只算新 token；累计从 1+2+...+n = O(n²) 降到 O(n)——`07-llm_from_scrach\part_3\kv_cache.py:33-70` |
-| 14 | MoE 的"稀疏激活"指什么？ | n_expert 个专家里每 token 只走 top-k；参数量 ×n，每 token FLOPs ≈ 1×FFN——`07-llm_from_scrach\part_5\moe.py:52-101` |
+| 14 | MoE 的"稀疏激活"指什么？ | n_expert 个专家里每 token 只走 top-k；参数量 ×n，每 token FLOPs（浮点运算量） ≈ 1×FFN——`07-llm_from_scrach\part_5\moe.py:52-101` |
 | 15 | GRPO 相对 PPO 的核心改动？ | 不要 value head；用 `A_i = r_i − μ_group` 代替 GAE；KL 显式加 loss——`07-llm_from_scrach\part_9\grpo_loss.py:21-65` |
 
 ---
@@ -629,12 +629,12 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 7. **精确缓存没 TTL** → 策略改了还返旧答案 → **(推断)** 必带 TTL；`05-model-route\03\runtime\two_level_cache.py:16` 已示范 `ttl=300`。
 8. **语义缓存按全局 namespace** → 用户 A 问"取消订单"被用户 B 命中 → **(推断)** key 必须含 `tenant_id`；`05-model-route\10\cache\risks.py:1` "租户串数据" 已点出。
 9. **路由"未知复杂度 = 最便宜"** → 新意图质量断崖 → **(推断)** 应改"未知 = 默认中档 + 人工审核"；仓库选 mini 是省钱导向（`05-model-route\05\pipeline\router.py:17`）。
-10. **账单只记成功** → 降级到 static-template 那次没记 → `05-model-route\05\pipeline\invoke.py:40-45` 无论成功/降级都 `ledger.record`。
+10. **账单只记成功** → 降级到 static-template（静态模板兜底） 那次没记 → `05-model-route\05\pipeline\invoke.py:40-45` 无论成功/降级都 `ledger.record`。
 11. **对账告警阈值太松** → 长期偏差 12% 没人管 → **(推断)** 阈值 5% 更稳；仓库默认 10%（`05-model-route\06\billing\reconcile.py:19`）偏松。
 12. **金丝雀分流键不带 user_id** → 全 V1 或全 V2 → 必须 `md5(user_id) % 100`（`05-model-route\09\deploy\canary.py:6`）；**(推断)** user_id 须稳定（用登录 ID，非 session）。
 13. **幻觉治理只在事后做** → 流出去了才发现 → `05-model-route\11\governance\{before,during,after}.py` 三段必齐；**(推断)** 事中拒答比事后追责损失小 10×。
 14. **工具调用不做白名单** → Agent 调 `os.system("rm -rf /")` 也能跑 → `05-model-route\08\guard\whitelist.py:8` 白名单是第一道闸。
-15. **Trace Span attributes 塞大对象** → trace 存储爆掉 → **(推断)** attributes 只放标签类（model/complexity/cost/hit）；prompt 走独立 payload 存储。
+15. **Trace Span attributes 塞大对象** → trace 存储爆掉 → **(推断)** attributes 只放标签类（model/complexity（复杂度分级）/cost/hit）；prompt 走独立 payload 存储。
 16. **KV cache 长度无上限** → 超长上下文 GPU OOM → `07-llm_from_scrach\part_3\kv_cache.py:150` `RollingKV(window, sink)` 滑动窗口 + sink 截断。
 
 ### 3.5 与其他层的关系（L1 不是孤岛）
@@ -746,6 +746,42 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 | KV cache | `07-llm_from_scrach\part_3\kv_cache.py:33-128` |
 | MoE | `07-llm_from_scrach\part_5\moe.py:14-101` / `07-llm_from_scrach\part_5\gating.py:38-83` |
 | GRPO | `07-llm_from_scrach\part_9\grpo_loss.py:21-65` / `07-llm_from_scrach\part_9\GRPO_TRAINING_EXPLANATION.md` |
+
+### E. 中英对照术语表（看不懂正文就回来查这里）
+
+> 阅读规则：**正文里第一次出现某行话时都会写成「词（中文）」**；本表是兜底，不是首次解释。
+
+| 英文术语 | 中文 | 一句人话 |
+|---|---|---|
+| Routing | 路由 | 按任务难度把请求分给不同模型，而不是所有活都喂最贵的那个 |
+| Complexity | 复杂度分级 | 判断"这活难不难"的分数（长度 / 关键词 / 规则），路由器的输入 |
+| Circuit Breaker | 熔断器 | 下游连续失败就先别再打了，直接走备用，防止一起被拖死 |
+| failure_threshold | 失败阈值 | 连续失败几次就跳闸（本项目默认 5 次）|
+| Half-open | 半开态 | 熔断后的试探窗口：放少量请求过去，通得过就恢复，通不过继续断 |
+| Retry / Backoff | 重试 / 退避 | 失败后隔一阵再试，且越试间隔越长（指数退避）|
+| Jitter | 抖动 | 在退避时间上加一点随机扰动，避免所有请求同一秒一起重试 |
+| Fallback | 降级 | 主模型不行就换备选，实在不行给静态兜底答案 |
+| degraded / static-template | 降级态 / 静态模板 | 服务还能返回但质量下降；再差的兜底就是直接吐预设文案 |
+| Exact Cache | 精确缓存 | 问题一字不差才命中，用 SHA256 做键，最安全 |
+| Semantic Cache | 语义缓存 | 意思相近就命中，省得多但会"答非所问" |
+| Jaccard | 杰卡德相似度 | 两个集合的重合比例；本文用它演示语义相似 |
+| TTL | 存活时间 | 缓存 / 条目多久过期自动失效 |
+| LRU | 最近最少使用 | 缓存满了先淘汰最久没被用过的 |
+| KV cache | 键值缓存 | 模型推理时缓存已算过的注意力中间结果——**和上面的"响应缓存"不是一回事** |
+| Span / SpanKind | 跨度 / 跨度类型 | 一次调用的最小记录单元；类型决定它是 ROUTE 还是 LLM 或 CACHE |
+| Trace | 追踪 | 把一次请求里所有 Span 串成时间线，事后能查因果 |
+| Billing / Ledger | 计费 / 账本 | 每次调用记下花了多少钱，账本可按 request_id 逐条回溯 |
+| Reconcile | 对账 | 本地估算 vs 厂商账单核对，差超过 10% 就告警 |
+| Governance | 治理 | 调用前后的规则：拦什么、限什么、事后怎么审计 |
+| Whitelist / Schema | 白名单 / 结构校验 | 只允许调这些工具；参数必须符合声明的结构才放行 |
+| Blue-green / Canary | 蓝绿 / 金丝雀 | 整包切换 vs 小流量试水（金丝雀按 user_id 稳定分流）|
+| Grounding / Citation | 有据 / 引用 | 答案必须来自检索到的资料；找不到依据就拒答 |
+| MoE | 混合专家 | 模型里有很多"专家"子网络，按需只激活少数几个，省算力 |
+| n_expert / top-k | 专家数 / 取前 k | 一共几个专家；每个 token 激活其中几个 |
+| SFT / PPO / GRPO | 三种训练法 | SFT=照着好答案学；PPO/GRPO=按奖励试错优化（GRPO 是 PPO 的省显存版）|
+| GAE | 广义优势估计 | PPO 里用来算"这一步比平均好多少"的估计量 |
+| FLOPs / QPS | 浮点运算量 / 每秒查询数 | 前者是算力消耗，后者是吞吐压力 |
+| Tenant | 租户 | 同一个系统里的不同客户；缓存和账本必须互相隔离 |
 
 ## 附录 B：诚实清单
 
