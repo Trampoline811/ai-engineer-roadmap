@@ -45,6 +45,7 @@
   - [2.7 Stop Condition 三种写法](#27-stop-condition-三种写法来自-09-loop-engineering03loop-engineeringmd229-303)
   - [2.8 参数速查表（综合三文的经验区间）](#28-参数速查表综合三文的经验区间)
   - [2.9 三文都强调的"Loop 候选任务"信号清单](#29-三文都强调的loop-候选任务信号清单)
+  - [2.10 Loop 落到代码里长什么样：三种形态（跨仓库实证）](#210-loop-落到代码里长什么样三种形态跨仓库实证)
   - [📋 面试卡片：实现层](#-面试卡片实现层)
 - 【分·工程层】[第三层 · 工程层：决策、避坑与场景](#第三层--工程层决策避坑与场景)
   - [3.1 决策树：什么时候该上 Loop？（地图 §3 的"缺了它会怎样"落地版）](#31-决策树什么时候该上-loop)
@@ -108,7 +109,7 @@ Loop 启动
 按「**概念层 → 实现层 → 工程层**」三层递进，把三文压缩成面试能讲出来的架构语言——
 
 - **概念层**：四层演进（Prompt→Context（上下文层）→Harness（外壳层）→Loop）+ Loop 的合法性 + 六大组件
-- **实现层**：三件套 / 两根柱子 / 最小工作单元 / 三种形态 / 跨文对照
+- **实现层**：三件套 / 两根柱子 / 最小工作单元 / 三种形态 / 跨文对照 / **三种代码形态（裸 loop · 自省式直线 · 图上的环，含本仓库实证）**
 - **工程层**：决策树 / 避坑清单 / 形态选型 / 何时不上
 
 每层末尾 5–10 张面试卡片，末尾 5 分钟速查卡可打印带去面试。
@@ -149,6 +150,7 @@ Loop 启动
 | §3 三篇的接力关系 | 1.8 概念之间的前提关系、3.1 决策树 |
 | §4 术语人话表 | 2.0 符号表（实现层专用符号，通用术语不重复）、附录 C 中英对照 |
 | §5 面试 30 秒答法 | 各层末尾 📋 面试卡片（分层版）、📇 5 分钟速查卡（压缩版） |
+| "这些概念到底怎么写进代码"（三文没讲的部分） | **2.10 三种代码形态**：裸 loop / 自省式直线 / 图上的环，每条都指到本仓库的真实文件与行号 |
 
 ### 1. 先把"Loop"用一句人话说清楚
 
@@ -163,6 +165,8 @@ Loop 启动
 源文 `09-loop-engineering\03.loop-engineering.md` §4 的原话类比：**像一个不用你盯着的聪明实习生**——你交目标，它自己决定下一步、自己检查、再来一轮，确认过几次之后才回来跟你说"做完了"。
 
 配套的关键预期（03 §3 原话精神）：**Loop 不是为了 100% 完美交付，而是让你"第一次就离目标近得多"。**
+
+> **三文只讲"为什么需要环"，不讲"环怎么写"。** 想知道这套概念落到代码是哪几行——直接看 **2.10 三种代码形态**（裸 loop / 自省式直线 / 图上的环，全部指向本仓库真实文件与行号）。
 
 ### 2. 三篇其实是一件事的三个阶段（不是三个并列的观点）
 
@@ -610,6 +614,105 @@ Stop Condition 是 Loop 能不能跑稳的命门。三文给出的写法可归�
 | 单 Agent 自嗨风险高 | 必须 Maker–Checker 分工 | 03 §5 |
 | 人不可能每小时 prompt | 人在充当 cron，是 Loop 的明确缺口 | 01 §8 |
 
+### 2.10 Loop 落到代码里长什么样：三种形态（**跨仓库实证**，不属三文）
+
+> **承接**：地图 §1 说"Loop = 让 AI 自己一轮一轮干"，2.6 给过一段伪代码，2.7 列过 Stop Condition 的三种写法。本节回答读完三文后最自然会冒出的一个问题——
+
+**"三篇全是概念，代码到底在哪？"**
+
+先说清楚这不是三文的疏漏，有三个结构性原因：
+
+1. **三篇是"合法性论证文"**，回答的是"为什么需要 Loop 这一层、不装护栏会怎么翻车"，不是 API 手册；
+2. **Loop 本身代码量极小**——剥掉包装就是"有限次循环 + 拼上下文 + 解析输出 + 更新状态 + 判断出口"，**没东西可展开**，所以文章只能往上讲道理；
+3. **它的形态取决于宿主**——同一个 loop，写在裸脚本里、写在 RAG 管线里、画进编排图里，长得完全不一样。所以"结合后续编排看"这个判断是对的。
+
+本仓库里能直接读到三种真实形态（下面只给"环在哪一行"的定位；框架 API 不展开，留 D4）：
+
+#### 形态① 裸 loop：最小、最直白
+
+**实证**：`06-harnes\learn-claude-code\s01_agent_loop\code.py:86`、`01-Agent\02-Agent_react\agent\loop.py:20-55`
+
+```python
+def react_loop(question, tools, llm, max_steps: int = 6):   # max_steps（最大步数）
+    history = []                                            # 状态：run 内的历史
+    for step in range(1, max_steps + 1):                    # ← 环（有限次，不是 while True）
+        out = llm(build_prompt(question, history, tools))   # Reason（推理）
+        action, action_input = parse_action(out)
+        if action and action in tools:
+            obs = tools[action].run(action_input)           # Act（行动）
+            history.append((thought, action, action_input, obs))  # Observe（观察）→ 回灌
+            continue
+        if "Final Answer:" in out:
+            return answer                                   # 出口 1：模型自决
+    return "Failed: max steps exceeded."                    # 出口 2：硬顶
+```
+
+**三条出口**（对应 2.7 的三种 Stop Condition）：
+
+| 出口 | 性质 | 面试怎么说 |
+|------|------|-----------|
+| `Final Answer:` 出现 | **模型自决**（主观） | "正常出口是模型说自己答完了——这条不可靠，得配独立验收" |
+| `max_steps` 用尽 | **硬顶**（客观） | "这就是 Hard Stop（硬停机）：不依赖模型的客观兜底" |
+| 输出非法 Action | ⚠️ **不是出口** | "解析不出合法工具时把 ERROR 塞回历史继续跑——**乱输出不会停，只会烧完步数**，这就是'没护栏就空转'的最小实证" |
+
+> 顺带一个细节：这份实现里有一句注释写着"**有合法工具可执行时，先执行工具；忽略同条回复里的 Final Answer**"——那是在防"模型没干活就宣称完成"，属于**最朴素的防自嗨护栏**。
+
+#### 形态② 自省式直线：loop 的**退化形态**
+
+**实证**：`02-RAG\03-high_level_RAG\03-self_rag.py:159-204`
+
+Self-RAG（自我反思式 RAG）的四步自省——`Retrieve?`（要不要检索）→ `IsRel?`（文档相关吗）→ `IsSup?`（答案有依据吗）→ `IsUse?`（答案好用吗）——看起来很像循环，但**读代码会发现它不是**：
+
+```python
+if not reflect_supported(llm, doc, answer):     # IsSup? 否
+    answer = generate_answer(...)               # → 重新生成一次，然后继续往下走
+                                                #   不回跳到判定节点重判，也没有轮数上限
+```
+
+- `IsSup?` / `IsUse?` 的"否"分支是**单次补救**，不回跳 → 这是**带自省的管线**，不是 loop；
+- 唯一真正的回路是 `IsRel?` 那段 **`for` 遍历候选文档**（`03-self_rag.py:172-178`）——但它的停止条件是"找到第一条相关文档即停"，不是"迭代到满意"。
+
+**它离真正的 loop 只差两步**（这正是编排层能提供的）：
+
+1. 把"否 → 重新生成"改成**条件边（只有满足条件才走的那条边）指回上游判定节点**——回跳，而不是往下走；
+2. 加**轮数 / 花费上限**——否则回跳就会变成 AutoGPT 式空转。
+
+**判定标准（值得背下来）**：**有回跳 + 有上限 = loop；只有补救没有回跳 = 管线。**
+
+#### 形态③ 图上的环：把 Loop 显式画成一条边
+
+**实证**：`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:76-78`
+
+```python
+graph.add_edge(START, "chat_node")                          # 入口
+graph.add_conditional_edges("chat_node", tools_condition)   # 停机判断：还有 tool_calls 吗？没有 → END
+graph.add_edge("tools", "chat_node")                        # ← 这一行就是"环"：工具跑完指回 chat_node
+```
+
+三行代码把 2.7 的三件事全说清了：
+
+| Loop 概念 | 图上的对应物 |
+|-----------|-------------|
+| **环**（再跑一轮） | `add_edge("tools", "chat_node")` —— 一条指回上游的边 |
+| **Stop Condition** | `tools_condition` —— 有工具调用就继续，没有就结束 |
+| **状态 / 跨 run 记忆** | 再挂 `checkpointer（检查点器：把状态存下来，支持续跑）` |
+| **人审（HITL）** | 再挂 `interrupt（中断：暂停等人确认）` |
+
+#### 三形态对照
+
+| | 形态① 裸 loop | 形态② 自省式直线 | 形态③ 图上的环 |
+|---|---|---|---|
+| **环在哪** | `for step in range(max_steps)` | 只有"遍历候选文档"那一层（退化） | 一条指回上游的边 |
+| **停机条件** | Final Answer（主观）+ max_steps（客观） | 四步自省全通过 | 条件边（`tools_condition` 一类） |
+| **状态存哪** | 进程内 `history`，run 结束即丢 | 函数内局部变量 | `checkpointer`，可跨 run |
+| **缺什么护栏** | 无独立验收、无花费上限、无跨 run 记忆 | 无回跳（不会真正迭代）、无上限 | 取决于挂了多少节点/钩子 |
+| **和 2.4 阵型的关系** | ≈ **Solo Loop**（默认形态） | 是 Solo Loop 的**前置件**（自省≈最小验收），不构成循环 | 是**承载** Maker–Checker / Manager+Helpers 的容器 |
+| **仓库实证** | `06-harnes\...\s01_agent_loop\code.py:86`、`01-Agent\02-Agent_react\agent\loop.py:20-55` | `02-RAG\03-high_level_RAG\03-self_rag.py:159-204` | `11-langgraph\...\backend\graph.py:76-78` |
+
+**一句话收口**：三文讲的是"为什么要有环"，2.10 讲的是"环写在哪儿"——而"用什么画这个环、环放在哪一层"（LangGraph ⊻ Hermes，同层二选一）是 **D4** 的收口。
+
+> **本节边界**：只做"环在哪一行"的定位，不展开 LangGraph / Hermes 的具体 API 与工程细节——那部分不在三文覆盖范围内，按附录 B 诚实清单如实交代即可。
+
 ### 📋 面试卡片：实现层
 
 **Q1**：一个 Loop 的三件套是什么？
@@ -631,10 +734,13 @@ Stop Condition 是 Loop 能不能跑稳的命门。三文给出的写法可归�
 **A6**：默认 Solo Loop（验证闭环即可）；需要客观化打分时上 Maker-Checker；任务可并行拆分时才考虑 Manager+Helpers，且要意识到成本与理解鸿沟会放大。
 
 **Q7**：Loop 和 ReAct 的区别？
-**A7**：ReAct 是 Agent 内的执行单元（Reason→Act→Observe），是 Loop 的"内环"；Loop 是把"下一轮是否开启、何时开启"工程化，是"外环"。Loop 通常包含多轮 ReAct。
+**A7**：**别把"形态"和"环的层级"混了。** ReAct 是 Loop 的**一种形态**（Solo Loop 的最小工作单元 Reason→Act→Observe 就来自 2022 年的 ReAct 范式），不是 Loop 的"内环"。所谓内环/外环，指的是**三环嵌套**：内环 = Context 工具环（Agent ⇄ 工具）、中环 = Harness 外置任务环、外环 = Loop 调度环（决定下一轮是否开启，见 1.1）。一个 Loop 里通常跑很多圈 ReAct；而把 Loop 写成代码的路子有三条（裸 loop / 自省式直线 / 图上的环），见 2.10。
 
 **Q8**：Loop 与 AutoGPT 的关键区别？
 **A8**：AutoGPT 常空转烧 token，因为没有硬停与独立验证；纪律型 Loop = 同指令反复喂 + 每轮重置上下文 + 独立检查决定是否结束——这是 Claude Code / Codex 主流形态（02 §2）。
+
+**Q9**：Loop 在代码里到底长什么样？
+**A9**：三条路（见 2.10）——①**裸 loop**：`for step in range(max_steps)` + 拼上下文 + 解析输出 + 执行工具 + 回灌 history；出口是"模型说答完了"和"跑满步数"两个，前者主观、后者才是硬停。②**自省式直线**（如 Self-RAG 的四步自省）：只有单次补救、没有回跳，是 loop 的**退化形态**。③**图上的环**：一条指回上游的边当环 + 一个条件边当停机判断，再挂检查点器管状态、挂中断做人审。判定诀窍一句话：**有回跳 + 有上限才是 loop，只有补救没有回跳是管线。**
 
 ---
 
@@ -806,13 +912,16 @@ Stop Condition 是 Loop 能不能跑稳的命门。三文给出的写法可归�
 | **06 大组件** | Automations / Worktrees / Skills / Plugins / Sub-agents / Memory | 当面试官问"Loop 由什么搭"时的清单 |
 | **Loop 跑多久** | 30 分钟–数小时常见；过夜 4–8h；12h+ 不推进则放弃 | 谈工程预算时的时间尺度 |
 | **01/02/03 关系** | 01 给合法性+配方，02 给护栏+真相，03 给形态+场景 | 三者递进互为前提 |
+| **Loop 的三种代码形态** | 裸 loop（有限次 for + 两条出口）/ 自省式直线（退化形态）/ 图上的环（一条边） | 被问"概念怎么落地"时给定位，见 2.10 |
+| **loop 判定诀窍** | **有回跳 + 有上限 = loop；只有补救没有回跳 = 管线** | 用来判断 Self-RAG 一类"像循环"的实现到底是不是 loop |
 
 ---
 
 ## 参考与后续动作
 
 - 三文内部交叉引用：01 §10 参考 Addy Osmani；02 §10 参考 Peter Steinberger / Boris Cherny；03 §10 参考 Matthew Berman Loop Library。
-- 后续收口（D4）：本页的 Loop 概念将与 LangGraph（确定性图编排）/ Hermes（记忆持久化）做对照——LangGraph 解决"如何把 Loop 描述得可执行"，Hermes 解决"Loop 跨 run 的记忆怎么存"。本文不引入外部细节，留待 D4 专题文档承接。
+- **§2.10 的额外来源**：不是三文，而是**本仓库内的代码实证**——`01-Agent\02-Agent_react\agent\loop.py`、`02-RAG\03-high_level_RAG\03-self_rag.py`、`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py`。它补的正是三文"只有概念、没有代码"的缺口，且只做定位、不展开框架 API。
+- 后续收口（D4）：本页的 Loop 概念将与 LangGraph（确定性图编排）/ Hermes（记忆持久化）做对照——LangGraph 解决"如何把 Loop 描述得可执行"，Hermes 解决"Loop 跨 run 的记忆怎么存"。**本文只到"环写在哪一行"，"用什么画、画在哪一层"留待 D4 专题文档承接。**
 - 本页为压缩版（按用户指南三层模板），目标行数 420–620；不做 1500+ 行完整版。
 
 ## 附录 A：面试常见追问 5 题（综合三文答法）
@@ -839,8 +948,10 @@ A：能写 `metric = result` 就别退到主观；主观停必须配 Scorer Sub-
 | 三文**直接给出**的概念 | Trigger/Action/Stop、Goal/Verification、Reason→Act→Observe、Solo/Maker-Checker/Manager+Helpers、Worktrees/Skills/Connectors/Sub-agents/Memory、Orchestration Tax、Hard Stop |
 | 三文**承认尚有争议**的部分 | Loop 是否 buzzword（01 §7）、AutoGPT 与纪律型 Loop 的边界（02 §2）、"24/7 舰队"是否值得（03 §2） |
 | 三文**没讲**、本文也不补的内容 | LangGraph / Claude Code / Codex 的具体 API 与实现细节、Memory 落盘的工程细节、Harness 与 Loop 的接口规范、Cron 与 Loop 在工程层的协议差异 |
+| **本文新增的跨仓库实证（不属三文，务必区分）** | **§2.10 三种代码形态**——`01-Agent\02-Agent_react\agent\loop.py`（裸 loop）、`02-RAG\03-high_level_RAG\03-self_rag.py`（自省式直线）、`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py`（图上的环）。**只做"环在哪一行"的定位，不展开框架 API**，以免与上一行的边界冲突 |
 
 > 面试时若被追问 LangGraph / Claude Code 等具体实现——**承认这部分不在三文覆盖范围内**，按本文"诚实清单"如实回答；不要假装三文里有。
+> 但"loop 到底写在哪儿"这个问题，本文 §2.10 已用**本仓库真实文件**给到定位，可以直接引用路径与行号。
 
 ## 附录 C：中英对照术语表
 
@@ -873,3 +984,9 @@ A：能写 `metric = result` 就别退到主观；主观停必须配 Scorer Sub-
 | Separate Checker | 独立验收人 | 干活的和验收的必须是两个角色（最好两个 agent），否则自评永远满分 |
 | Logging | 日志 | 把每轮做了什么记下来，事后能审计"系统到底在干嘛" |
 | Cron | 定时任务 | 到点跑固定脚本，不会思考、不会变通 |
+| Reflection | 自省 | 让模型对自己的产出做一次"是/否"判断；自省 ≈ 最小版验收 |
+| Self-RAG | 自我反思式 RAG | 检索前后四步自省：要不要检索 / 文档相关吗 / 有依据吗 / 好用吗 |
+| Conditional edge | 条件边 | 只有满足条件才走的那条边；画在图里它承担的就是"停机判断" |
+| Checkpointer | 检查点器 | 把图 / 会话状态持久化，支持断点续跑与回放 |
+| max_steps | 最大步数 | 循环的客观硬顶：跑满就停，失败也要有收口 |
+| Interrupt | 中断 | 图内主动暂停，等人确认后再继续（人审的落点） |
