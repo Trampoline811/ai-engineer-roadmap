@@ -1,8 +1,8 @@
 # D2 — L2 上下文：记忆 + 知识（RAG）
 
-> **日期：2026-09-19（周六）** ｜ 覆盖层：**L2 上下文（知识 · 记忆）**
+> **日期：2026-10-12（周一）** ｜ 覆盖层：**L2 上下文（知识 · 记忆）**
 > **今日面试锚（A）**：① "你凭什么决定记什么 / 忘什么？" ② "向量库 ≠ RAG——完整管线是什么？" ③ "RAG / 记忆 / 长上下文 三者边界"
-> **主阅读（提纯版）**：`00-我的深度整合专题\Agent面试5日冲刺\提纯精读\P2-记忆实现对照提纯.md`（今日新增）
+> **主阅读（提纯版）**：`00-我的深度整合专题\Agent面试5日冲刺\提纯精读\P2-记忆实现对照提纯.md`（790 行，全读）
 > ＋复用已有资产：`00-我的深度整合专题\Agent记忆深度解析\Agent_Memory_Deep_Dive.md`、`00-我的深度整合专题\RAG评估深度解析\RAG_Evaluation_Deep_Dive.md`（**只复习不重造**）
 > ＋`99-My idea\AI Agent 学习指南\01.longterm memory.md`（mem0 详解，965 行，作者详解级证据）
 
@@ -18,8 +18,8 @@
 | `03-memory\01-windowed_memory.ipynb` / `03_summary_memory.ipynb` | ✅ | 13.3 KB / 26.9 KB |
 | `06-harnes\learn-claude-code\s09_memory\README.md` / `06-harnes\learn-claude-code\s09_memory\code.py` | ✅ | 280 / 655 |
 | `06-harnes\learn-claude-code\s08_context_compact\README.md` / `06-harnes\learn-claude-code\s08_context_compact\code.py` | ✅ | 306 / 524 |
-| `06-harnes\learn-claude-code\s03_permission\README.md` | ✅ | 232（**D1 顺延补读**） |
-| `06-harnes\learn-claude-code\s10_system_prompt\README.md` | ✅ | 254（**D1 顺延补读**） |
+| `06-harnes\learn-claude-code\s03_permission\README.md` | ✅ | 232（D1 已读，口述卡壳时回看） |
+| `06-harnes\learn-claude-code\s10_system_prompt\README.md` | ✅ | 254（D1 已读，口述卡壳时回看） |
 | `08-hermes-agent\01-arch.md` / `08-hermes-agent\02-memory.md` | ✅ | 657 / 651 |
 | `08-hermes-agent\01-memory\README.md` | ✅ | 109 |
 | `08-hermes-agent\07-mem-provider\README.md` | ✅ | 119 |
@@ -38,18 +38,19 @@
 
 ---
 
-## ⏱ 时间盒（≈8.5h）
+## ⏱ 时间盒（压缩版，≈7h，13:00 起跑）
 
 | 时段 | 动作 | 具体内容 | 产出 |
 |---|---|---|---|
-| 08:30-09:30 | **主动回忆 + 补读** | 口述 D1 三问（不看笔记）；补读 `06-harnes\learn-claude-code\s03_permission\README.md` + `s10_system_prompt\README.md` | 3 答记录 + 权限四决策/组装原则进总图 |
-| 09:30-11:00 | **记忆概念 M** | `提纯精读\P2-记忆实现对照提纯.md` 概念层 + 实现层；**跑** `03-memory\04_three_factor_scoring.ipynb`、`03-memory\02_long_term_memory.ipynb` | 三因子公式能背 + 见写码挑战② |
-| 11:00-12:30 | **hermes 源码 M** | `08-hermes-agent\02-memory.md` + `01-memory\README.md` + `07-mem-provider\README.md`；**逐个读** `08-hermes-agent\07-mem-provider\hermes_src\excerpts\`（7 个接线点） | provider 生命周期四钩子笔记 |
-| 14:00-15:30 | **对照 D** | waku：`12-hermes-agent-small\waku\memory\__init__.py` + `12-hermes-agent-small\waku\memory\retrieval_gate.py` + `12-hermes-agent-small\waku\memory\consolidation.py`；pi：`13-pi-agent\04-sessions.md` + `13-pi-agent\05-compaction.md`；LangGraph：`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py` | 三种 runtime 的记忆差异 |
-| 15:30-16:15 | ⚔️ **写码挑战②** | 闭卷手写三因子打分（见下） | 差异点笔记 |
-| 16:15-17:15 | **RAG 主线 M** | `02-RAG\01-simple_rag\README.md`（最小闭环）+ `02-RAG\02-RAG_basic\README.md`（12 个知识点）→ **RAG 十步管线卡** | 十步管线卡 |
-| 17:15-18:45 | **RAG 进阶 + 评测复习** | `02-RAG\03-high_level_RAG\README.md`（五范式）+ `02-RAG\06 Agentic RAG\code\agentic_rag_demo.py` 精读并 `--mock` 跑通；`02-RAG\04_RAG_Evaluation\lesson1_rag_evaluation\README.md` + `02-RAG\04_RAG_Evaluation\lesson2_rag_metrics\README.md` 复习 | Agentic RAG 三幕结构 + 四指标口述 |
-| 20:00-21:30 | **整合 A** | **记忆对照表成稿**（模板见产出区）+ RAG 十步管线卡 + **RAG/记忆/长上下文边界卡** + 面试卡 8 问 | 本文件产出区 |
+| 13:00-13:20 | 主动回忆 | 闭卷口述 D1 三问，答案在 `day1-loop-harness.md` 的晚间复盘一节 | 3 答记录 |
+| 13:20-15:00 | 记忆概念 | `提纯精读\P2-记忆实现对照提纯.md`（790 行）概念层与实现层；源文件只在标 `↳深挖` 处回查 | 三因子公式能口述 |
+| 15:00-16:00 | 跑 notebook | `03-memory\04_three_factor_scoring.ipynb`（纯 stdlib）+ `03-memory\02_long_term_memory.ipynb`（mock 向量） | 说得出两本各验证了什么 |
+| 16:00-16:25 | 写码挑战② | 闭卷手写三因子打分（见下，25 分钟） | 差异点笔记 |
+| 16:25-17:30 | 记忆对照表 | 8 个内核问题 × 8 套实现，填产出区 ① | 对照表成稿 |
+| 19:30-20:30 | RAG 主线 | `02-RAG\01-simple_rag\README.md`（176）+ `02-RAG\03-high_level_RAG\README.md`（64）；跑通 `02-RAG\06 Agentic RAG\code\agentic_rag_demo.py --mock`（200 行） | RAG 十步管线卡 |
+| 20:30-21:30 | 整合 | 十步管线卡 + 边界卡成稿 + 面试卡 8 问口述 | 本文件产出区 ②③④ |
+
+压缩掉四个整篇读的段落，内容已由 P2 覆盖：hermes 源码（`08-hermes-agent\02-memory.md` 651 + `08-hermes-agent\01-memory\README.md` 109 + `08-hermes-agent\07-mem-provider\README.md` 119 + excerpts 7 个接线点）、waku 记忆层（`12-hermes-agent-small\waku\memory\` 的 169 + 55 + 75）、pi 会话树（`13-pi-agent\04-sessions.md` 195 + `13-pi-agent\05-compaction.md` 231）、LangGraph 检查点（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py` 10）。这些文件只在填对照表遇到疑问时按需回查，不再整篇读。
 
 > ⚠️ `02-RAG\03-high_level_RAG\04-graph_rag进阶`（Neo4j）**跑不了**（Docker 未启动）→ 只读概念。
 > ⚠️ mem0 是"**作者详解级**"证据（`99-My idea\AI Agent 学习指南\01.longterm memory.md`，无源码）；`dsh-memory-evolve` 是"**源码级**"生产实证。标注不能混。

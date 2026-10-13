@@ -1,8 +1,8 @@
 # D5 — L5 观测 + L6 界面 + 总收口
 
-> **日期：2026-09-22（周二）** ｜ 覆盖层：**L5 观测（Trace·Eval·护栏）＋ L6 界面 ＋ 六层栈总收口**
+> **日期：2026-10-14（周三）** ｜ 覆盖层：**L5 观测（Trace·Eval·护栏）＋ L6 界面 ＋ 六层总收口**
 > **今日面试锚（A）**：① "怎么评测一个 agent？评测怎么进 CI？" ② "出错了怎么查"（**失败归因链**）③ "六层栈逐层讲"（今天必须能完整讲一遍）
-> **主阅读（提纯版）**：`00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md`（今日新增）＋`99-My idea\Agent eval\01-eval.md`＋既有 `RAG评估深度解析\RAG_Evaluation_Deep_Dive.md`（复习）
+> **主阅读（提纯版）**：`00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md`（747 行，全读）＋`99-My idea\Agent eval\01-eval.md`（267）＋既有 `00-我的深度整合专题\RAG评估深度解析\RAG_Evaluation_Deep_Dive.md`（复习）
 
 ---
 
@@ -10,7 +10,7 @@
 
 | 路径 | 状态 | 行数/大小 |
 |---|:--:|---|
-| `00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md` | ✅ 已就绪 | 546 |
+| `00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md` | ✅ 已就绪 | 747 |
 | `99-My idea\Agent eval\01-eval.md` | ✅ | 267（四维：Capability / Reliability / Cost / Safety） |
 | `08-hermes-agent\03-eval\README.md` | ✅ | 228 |
 | `08-hermes-agent\03-eval\notes\02_logging_trace.md` / `03_eval_harness.md` | ✅ | 229 / 283 |
@@ -36,18 +36,20 @@
 
 ---
 
-## ⏱ 时间盒（≈8.5h，最后一段留给模拟面试）
+## ⏱ 时间盒（压缩版，模拟面试挪到 10-15 演练日）
 
 | 时段 | 动作 | 具体内容 | 产出 |
 |---|---|---|---|
-| 08:30-09:00 | **主动回忆** | 口述 D4 三问 + 回看六层栈总图全貌 | 3 答记录 |
-| 09:00-10:30 | **L5 概念 M** | `观测与评测深度解析\Observability_Eval_Deep_Dive.md` 概念层 + 实现层；`99-My idea\Agent eval\01-eval.md`（四维） | "RAG 评测 → Agentic eval" 演进卡 |
-| 10:30-12:30 | **L5 实证 D** | hermes：`08-hermes-agent\03-eval\README.md` + `08-hermes-agent\03-eval\notes\02_logging_trace.md` + `08-hermes-agent\03-eval\notes\03_eval_harness.md` + `08-hermes-agent\03-eval\demo\README.md` + 4 份已跑产物；waku：`12-hermes-agent-small\waku\ops\release_gate.py` + `12-hermes-agent-small\waku\ops\tracing.py` + `12-hermes-agent-small\waku\ops\judge.py`；`12-hermes-agent-small\evals\deterministic\README.md` | **失败归因链 8 步**卡 + 门禁卡 |
-| 14:00-15:00 | **L5 补漏** | `05-model-route\07\trace\collector.py`（trace 落盘）+ `05-model-route\08\guard\`（护栏三件套）+ `05-model-route\09\deploy\canary.py`（灰度）+ `05-model-route\11\main.py`（治理三段式） | 观测/发布/治理三件套笔记 |
-| 15:00-16:00 | **CI/CD 突击** | `10-CICD\cicd学习大纲.md` + `10-CICD\01-basic\01-ci-cd-定义.md` + `10-CICD\02-pytest\README.md` + `10-CICD\03-gitlab-ci\03-标准流水线流程.md` + `10-CICD\08-review\02-高频面试题.md`（**背题**；其余 5 组跳过） | CICD 背题卡 |
-| 16:00-16:45 | **L6 界面** | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend\hitl.py` + `11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend\chat.py`（流式 + 人审按钮）；`12-hermes-agent-small\waku\gateway\cli.py` + `12-hermes-agent-small\waku\gateway\telegram.py` + `12-hermes-agent-small\waku\gateway\voice.py`（多通道入口） | L6 一句话 + 界面原则卡 |
-| 16:45-17:45 | **总收口 A** | 合并 5 天全部图/表 → **《面试总纲 v1》**：三条主线口述稿（一条消息的一生 / 记忆与上下文 / RAG 与评测）+ 两张王牌表（记忆对照表、框架选型矩阵）+ **六层栈逐层答法**；挑 2-3 个**真正跑通**的 demo 写成项目叙事 | 面试总纲 v1 |
-| 19:30-21:00 | **总演练** | **模拟面试 60–75min**（自问自答/录音）+ 5 分钟速查卡通背 + 薄弱点清单 | 模拟记录 + D6+ 清单 |
+| 08:30-09:00 | 主动回忆 | 闭卷口述 D4 三问 + 回看六层总图全貌 | 3 答记录 |
+| 09:00-10:30 | L5 概念 | `00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md`（747 行）概念层与实现层；`99-My idea\Agent eval\01-eval.md`（267，四维） | 「RAG 评测 → Agentic eval」演进卡 |
+| 10:30-11:45 | L5 实证 | hermes：`08-hermes-agent\03-eval\README.md`（228）+ `08-hermes-agent\03-eval\notes\02_logging_trace.md`（229）+ `08-hermes-agent\03-eval\notes\03_eval_harness.md`（283）+ `08-hermes-agent\03-eval\demo\exports\eval_run\` 四份已跑产物；waku：`12-hermes-agent-small\waku\ops\release_gate.py`（114）+ `12-hermes-agent-small\waku\ops\tracing.py`（167）+ `12-hermes-agent-small\waku\ops\judge.py`（101）+ `12-hermes-agent-small\evals\deterministic\README.md`（86） | 失败归因链 8 步卡 + 门禁卡 |
+| 11:45-12:30 | CI/CD 突击 | `10-CICD\cicd学习大纲.md`（251）+ `10-CICD\01-basic\01-ci-cd-定义.md`（362）+ `10-CICD\02-pytest\README.md`（48）+ `10-CICD\03-gitlab-ci\03-标准流水线流程.md`（249）+ `10-CICD\08-review\02-高频面试题.md`（49），只背这五份 | CICD 背题卡 |
+| 14:00-14:45 | L6 界面 | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend\hitl.py`（183）+ `11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend\chat.py`（207）；`12-hermes-agent-small\waku\gateway\cli.py`（88）+ `12-hermes-agent-small\waku\gateway\telegram.py`（122） | L6 原则卡 |
+| 14:45-15:30 | L5 补漏 | `05-model-route\07\trace\collector.py`（58）+ `05-model-route\08\guard\`（41/10/27）+ `05-model-route\09\deploy\canary.py`（14）+ `05-model-route\11\main.py`（67） | 观测与发布与治理三件套笔记 |
+| 15:30-17:30 | 总收口 | 合并五张 day 卡的图与表 → 《面试总纲 v1》：三条主线口述稿 + 两张王牌表 + 六层逐层答法；挑 2–3 个真跑通的 demo 写成项目叙事 | 面试总纲 v1 |
+| 19:30-21:00 | 写码挑战⑤ | 白板与口述版本，录音 3 分钟（见下） | 录音 + 薄弱点清单 |
+
+压缩掉的部分：`08-hermes-agent\03-eval\demo\README.md`（393）、`12-hermes-agent-small\docs\benchmarks.md`（445）、`12-hermes-agent-small\waku\gateway\voice.py`（360）、`02-RAG\04_RAG_Evaluation\lesson2_rag_metrics\README.md`（150，D2 已复习）、`14-deepseek-harness\01.arch.md`（296，D4 已读）。60–75 分钟的模拟面试整体挪到 10-15 演练日。
 
 ---
 
@@ -127,6 +129,6 @@ L6 界面    → 界面是栈顶，不替系统智力；越简单越好
 - 六层栈逐层答法（上面那张）
 - 可讲项目叙事 ×2–3（**只用真跑通的**）：背景 → 我做了什么 → 指标/评测 → 踩坑
 
-### ⑤ 模拟面试记录 + 薄弱点清单（D6+ 只补这些）
+### ⑤ 模拟面试记录 + 薄弱点清单（10-15 演练日填）
 
 （待填）

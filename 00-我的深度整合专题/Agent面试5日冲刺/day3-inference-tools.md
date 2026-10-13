@@ -1,8 +1,8 @@
 # D3 — L1 推理 + L3 动作：模型·引擎·路由 + 协议·工具
 
-> **日期：2026-09-20（周日）** ｜ 覆盖层：**L1 推理 ＋ L3 动作**
+> **日期：2026-10-13（周二）上午** ｜ 覆盖层：**L1 推理 ＋ L3 动作**
 > **今日面试锚（A）**：① "模型怎么选 / 怎么跑 / 怎么路由 / 怎么控成本？" ② "工具协议有几种变体？MCP 到底是什么？" ③ "工具有副作用——权限决策怎么做？"
-> **主阅读（提纯版）**：`00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（今日新增，L1）
+> **主阅读（提纯版）**：`00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（791 行，全读，先看 5 分钟速查卡与概念层）
 > L3 用现有散件收口（工具协议三变体 + MCP + 权限/沙箱），可用 `提纯精读` 线索快速定位
 
 ---
@@ -11,7 +11,7 @@
 
 | 路径 | 状态 | 行数/大小 |
 |---|:--:|---|
-| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | ✅ 已就绪 | 623 |
+| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | ✅ 已就绪 | 791 |
 | `05-model-route\README.md` | ✅ | 52（**自带"面试清单→代码映射"，先读它**） |
 | `05-model-route\01\main.py` + `01\breaker\circuit_breaker.py` | ✅ | 60 / 61 |
 | `05-model-route\02\main.py` + `02\cache\exact_cache.py` | ✅ | 55 / 19 |
@@ -42,18 +42,19 @@
 
 ---
 
-## ⏱ 时间盒（≈8.5h）
+## ⏱ 时间盒（压缩版，08:00-12:35，半天过完）
 
 | 时段 | 动作 | 具体内容 | 产出 |
 |---|---|---|---|
-| 08:30-09:00 | **主动回忆** | 口述 D2 三问（不看笔记） | 3 答记录 |
-| 09:00-11:00 | **L1 实证 D** | `推理与路由深度解析\Model_Route_Deep_Dive.md` 全读；**挑 4 个模块真跑**（各自目录下的 main.py 直接 `python` 跑，看打印输出）：`05-model-route\01\main.py`（熔断重试）、`05-model-route\05\main.py`（路由+回退+计费）、`05-model-route\10\main.py`（语义缓存）、`05-model-route\11\main.py`（治理三段式） | L1 选型卡（引擎/路由/成本） |
-| 11:00-12:30 | **L1 概念 M** | `07-llm_from_scrach\part_1\README.md`（注意力/tokenizer）→ `part_3\kv_cache.py` → `part_5\README.md`（MoE）→ `part_9\GRPO_TRAINING_EXPLANATION.md`（1h，重点） | **一页演进卡**：tokenizer→attention→SFT→RM→PPO→GRPO + KV cache + MoE |
-| 14:00-15:30 | **L3 协议 M** | 工具协议三变体对照：`01-Agent\00-llm_function_call.py`（原生 tools JSON）↔ `01-Agent\01-small-llm-function-call-project\README.md` ↔ `01-Agent\02-Agent_react\agent\tools\__init__.py` + `01-Agent\02-Agent_react\agent\prompt.py`（手写 Action 文本协议）；再看 `06-harnes\learn-claude-code\s02_tool_use\README.md` | **工具协议对照表** |
-| 15:30-16:15 | ⚔️ **写码挑战③** | 闭卷写一个工具的 schema + 分发函数（见下） | 差异点笔记 |
-| 16:15-17:30 | **L3 权限与 MCP** | MCP：`06-harnes\learn-claude-code\s19_mcp_plugin\README.md` + `12-hermes-agent-small\waku\tools\mcp_client.py` + `12-hermes-agent-small\waku\tools\registry.py`；权限：`05-model-route\08\guard\schema.py`（契约）+ `05-model-route\08\guard\whitelist.py`（白名单）+ `05-model-route\08\guard\executor.py`（执行守卫）；沙箱阶梯：`08-hermes-agent\05-env\README.md` + `08-hermes-agent\05-env\hermes_src\tools\environments\base.py`（读类结构） | **权限决策树** + 沙箱阶梯表 |
-| 17:30-18:45 | **收口 A** | L1 选型卡成稿 + 工具协议对照表成稿 + 权限决策树成稿；回填 D1 六层栈总纲表的 **L1 / L3 两行** | 三张卡 |
-| 20:00-21:30 | **整合** | 挂总图（LLM 调用节点 + 工具节点）+ 面试卡 8 问 + 口述自测 | 本文件产出区 |
+| 08:00-08:30 | 主动回忆 | 闭卷口述 D2 三问 | 3 答记录 |
+| 08:30-09:40 | L1 概念 | `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（791 行）全读，速查卡与概念层优先 | L1 选型卡 |
+| 09:40-10:25 | L1 跑实证 | 跑 `05-model-route\01\main.py`（熔断重试）、`05-model-route\05\main.py`（路由+回退+计费）、`05-model-route\10\main.py`（语义缓存）、`05-model-route\11\main.py`（治理三段式），看打印输出 | 四段输出能与选型卡对上 |
+| 10:25-11:00 | L3 协议 | 工具协议三变体：`01-Agent\00-llm_function_call.py`（334，原生 tools JSON）、`01-Agent\01-small-llm-function-call-project\README.md`（171）、`01-Agent\02-Agent_react\agent\tools\__init__.py`（24，注册中心）；MCP：`06-harnes\learn-claude-code\s19_mcp_plugin\README.md`（282）+ `12-hermes-agent-small\waku\tools\mcp_client.py`（100） | 工具协议对照表 |
+| 11:00-11:25 | 写码挑战③ | 闭卷写一个工具的 schema 与分发函数（见下，25 分钟） | 差异点笔记 |
+| 11:25-12:05 | L3 权限 | `05-model-route\08\guard\schema.py`（41，契约）+ `whitelist.py`（10，白名单）+ `executor.py`（27，执行守卫）；沙箱阶梯：`08-hermes-agent\05-env\README.md`（106） | 权限决策树成稿 |
+| 12:05-12:35 | LLM 概念卡 | `07-llm_from_scrach\part_1\README.md`（注意力与 tokenizer）+ `part_3\kv_cache.py` + `part_9\GRPO_TRAINING_EXPLANATION.md`；MoE 只记 top-k 稀疏一条 | 一页演进卡 |
+
+压缩掉的部分：`08-hermes-agent\05-env\hermes_src\tools\environments\base.py`（959 行）与 `docker.py`（1460 行）只读类结构，不逐行；`06-harnes\learn-claude-code\s02_tool_use\README.md`（222）与 `12-hermes-agent-small\waku\tools\registry.py`（49）在 D1 已读，今天只在填对照表时回看。
 
 ---
 
@@ -83,7 +84,7 @@
 
 ---
 
-## 🌙 晚间复盘 3 问（明早 D4 开场口述）
+## 🌙 晚间复盘 3 问（D4 开场口述，10-13 下午）
 
 1. L1 的"分层配置"用一句话讲清（成本 vs 智商）。
 2. 工具协议三变体，你推荐哪个、为什么？
