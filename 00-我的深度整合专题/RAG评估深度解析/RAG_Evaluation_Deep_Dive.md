@@ -2658,7 +2658,7 @@ def print_report(result, samples: list[dict]):
         print("\n  📋 逐样本明细：")
         df = result.to_pandas()
         for i, row in df.iterrows():
-            print(f"    ── 样本 {i+1}: {samples[i]['question'][:50]}...")
+            print(f"    -- 样本 {i+1}: {samples[i]['question'][:50]}...")
             for col in df.columns:
                 score = float(row[col])
                 level = classify_score(col, score)

@@ -115,7 +115,7 @@ LangGraph 与 Hermes **都在"运行时/编排层"，解决同一类问题**：�
 
 ### 1.3 统一类比（贯穿全文）：同一层的两台发动机
 
-LangGraph 与 Hermes 是**同一层的两台发动机**——LangGraph 是**给你零件**的发动机厂（图编排库，你装 State / Node / Edge，它帮你跑）；Hermes 是**整车**（成品 harness（外壳工程），循环 + SP 组装 + Tools + Skills + Memory + Gateway + Cron + Eval 全部预装）。你可以**只用零件**自己装（LangGraph），也可以**直接开走**整车（Hermes），但**不要在车上再加一台发动机**——那是叠两套循环的下场（见 §0.3 失败模式 1）。下文每个对照（控制流 / 持久化 / HITL / 记忆 / 语言）都回到这个类比。
+LangGraph 与 Hermes 是**同一层的两台发动机**——LangGraph 是**给你零件**的发动机厂（图编排库，你装 State / Node / Edge，它帮你跑）；Hermes 是**整车**（成品 harness（外壳工程），循环 + SP 组装 + Tools + Skills（技能） + Memory + Gateway + Cron + Eval 全部预装）。你可以**只用零件**自己装（LangGraph），也可以**直接开走**整车（Hermes），但**不要在车上再加一台发动机**——那是叠两套循环的下场（见 §0.3 失败模式 1）。下文每个对照（控制流 / 持久化 / HITL / 记忆 / 语言）都回到这个类比。
 
 ### 1.4 同层二选一：同一控制流的两种实现
 
@@ -194,7 +194,7 @@ flowchart TD
 
 **Q2. Hermes 用了 LangChain / LangGraph 吗？**
 
-> **A**：核心**没用**。`09-lang-serial-not/README.md` §3.1 明示 Hermes 的 `pyproject.toml` 核心依赖是 `openai==2.24.0 / httpx / pydantic / fastapi`，**没有** `langchain / langgraph / langsmith / llama-index / crewai / autogen`；§3.2 实证"在 `*.py`/`*.ts` 中检索 `from langgraph / import langgraph` → **零命中**"。LangChain 仅在可选 skill / 文档示例里出现（如 `optional-skills/mlops/chroma` 等的"如何接入 LC 生态"片段），不是 runtime 依赖。
+> **A**：核心**没用**。`09-lang-serial-not/README.md` §3.1 明示 Hermes 的 `pyproject.toml` 核心依赖是 `openai==2.24.0 / httpx / pydantic / fastapi`，**没有** `langchain / langgraph / langsmith / llama-index / crewai / autogen`；§3.2 实证"在 `*.py`/`*.ts` 中检索 `from langgraph / import langgraph` → **零命中**"。LangChain 仅在可选 skill（技能） / 文档示例里出现（如 `optional-skills/mlops/chroma` 等的"如何接入 LC 生态"片段），不是 runtime 依赖。
 
 **Q3. Hermes 的 Session 和 Turn 是什么关系？为什么这个区分重要？**
 

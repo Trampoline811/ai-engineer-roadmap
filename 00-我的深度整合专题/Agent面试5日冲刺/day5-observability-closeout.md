@@ -11,7 +11,7 @@
 | 路径 | 状态 | 行数/大小 |
 |---|:--:|---|
 | `00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md` | ✅ 已就绪 | 744 |
-| `99-My idea\Agent eval\01-eval.md` | ✅ | 267（四维：Capability / Reliability / Cost / Safety） |
+| `99-My idea\Agent eval\01-eval.md` | ✅ | 267（四维：Capability（能力）/ Reliability（可靠性）/ Cost（成本）/ Safety（安全）） |
 | `08-hermes-agent\03-eval\README.md` | ✅ | 228 |
 | `08-hermes-agent\03-eval\notes\02_logging_trace.md` / `03_eval_harness.md` | ✅ | 229 / 283 |
 | `08-hermes-agent\03-eval\demo\README.md` | ✅ | 393 |
@@ -53,12 +53,12 @@
 
 ---
 
-## 写码挑战⑤（30min，白板/口述版 —— 5 天阶梯的最后一级）
+## 写码挑战⑤（25 分钟，白板/口述版 —— 5 天阶梯的最后一级）
 
 闭卷、不看代码，在纸上/白板画出并录音 3 分钟讲清以下任意一项：
 
 1. 一条消息的一生：L6 界面进来 → L4 组装与循环 → L1 调用 → L3 工具 → L2 注入 → L5 落盘，标出每层挂在哪个文件；
-2. 最小 harness 的 5 件（循环 / 状态 / 工具 / 停机 / 人审）在 LangGraph 与 Hermes 里分别由谁提供；
+2. 最小 harness（外壳工程）的 5 件（循环 / 状态 / 工具 / 停机 / 人审）在 LangGraph 与 Hermes 里分别由谁提供；
 3. 失败归因链 8 步 + 每步你用什么观测手段。
 
 判据：能不看笔记说出文件路径（至少到目录级），说明这 5 天读的是真代码而不是概念；说不出就回对应 day 卡的核验表补。
@@ -83,7 +83,7 @@
 ```
 L1 推理    → 我按"成本 vs 智商"分层配置：固定 task 用本地小模型，复杂推理走大模型，缺一层路由代码就会散落各处（实证：05-model-route 11 个模块）
 L2 上下文  → 知识 ≠ 记忆；向量库 ≠ RAG，它只是十步管线第 6 步；先查解析再调检索
-L3 动作    → MCP 底层还是 tool call；工具会改世界→只读当不可信文本、改状态先人审、跑代码进沙箱
+L3 动作    → MCP 底层还是 tool call（工具调用）；工具会改世界→只读当不可信文本、改状态先人审、跑代码进沙箱
 L4 运行时  → LangGraph 与 Hermes 同层二选一，不叠两套循环；按"业务工作流 vs 终端干活"选
 L5 观测    → 没有 traces 你只是在猜；先建 30 条真实用例；失败按归因链查
 L6 界面    → 界面在最上层，不替系统智力；越简单越好

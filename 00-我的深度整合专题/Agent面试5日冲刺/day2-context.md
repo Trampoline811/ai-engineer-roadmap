@@ -73,7 +73,7 @@ importance 的加权合成
 
 ## 面试卡（今日自答，晚间口述）
 
-1. 记忆三因子（relevance / recency / importance）各是什么公式？为什么"凭什么决定记什么"要用它答？
+1. 记忆三因子 relevance（相关性）/ recency（近期性）/ importance（重要性）各是什么公式？为什么"凭什么决定记什么"要用它答？
 2. min-max 为什么必须批内归一化，而不能对整库做？（提示：候选集每轮都在变）
 3. "memory 比 RAG 多两个因子"——怎么解释（写入准入 与 检索排序）？
 4. 分层记忆：什么进上下文、什么持久化、什么淘汰？举一个生产系统（`dsh-memory-evolve` 六轨）为例。
@@ -98,15 +98,15 @@ importance 的加权合成
 
 ★ 最后两列已预填：`dsh-memory-evolve` = 源码级生产实证（`~/.dsh/profiles/web/node_modules/dsh-memory-evolve/lib/store.js` 等，导览见 `prep0-plugin-memory-arch.md`）；mem0 = 作者详解级。
 
-| 内核问题 | 03-memory | harness s09 | hermes(四层+provider) | waku(四层+gate) | pi(会话树) | LangGraph(checkpoint) | mem0（作者详解级） | dsh-memory-evolve（源码级） |
+| 内核问题 | 03-memory | harness（外壳工程） s09 | hermes（四层 + provider（提供方）） | waku（四层 + gate（检索闸门）） | pi（会话树） | LangGraph（checkpoint（检查点）） | mem0（作者详解级） | dsh-memory-evolve（源码级） |
 |---|---|---|---|---|---|---|---|---|
 | 什么进上下文 | | | | | | | | 全局 MEMORY/USER + 本项目 KEY（按 git 分支过滤）；daily/project 永不注入、工具按需读 |
 | 什么持久化 | | | | | | | | 纯 md：USER/MEMORY.md + `projects\<hash>\{KEY,MEMORY,TODOS}.md` + daily + SUGGESTIONS.jsonl |
 | 什么淘汰 | | | | | | | | ArchiveStore → `*-archive.md` 冷存储，可"移回主记忆" |
 | 跨会话恢复 | | | | | | | | 快照注入（live read + 变更检测）；KEY 摘要 ≤80 字 + `[mem-id]` expand |
-| provider 抽象 | | | | | | | | 宿主内六轨直管；可选 git 同步 ≈ hermes external provider 层 |
+| provider（提供方）抽象 | | | | | | | | 宿主内六轨直管；可选 git 同步 ≈ hermes external provider 层 |
 | 防投毒/一致性 | | | | | | | | 威胁扫描 + subagent 禁写全局轨 + 目录锁 + tmp-rename 原子写 |
-| 人确认 HITL | | | | | | | | KEY/全局/技能创建 → SuggestionQueue → 记忆 Tab 采纳 |
+| 人确认 HITL（人在回路） | | | | | | | | KEY/全局/技能创建 → SuggestionQueue → 记忆 Tab 采纳 |
 | 写入触发时机 | | | | | | | | 每轮收尾一次批量写（daily + project） |
 
 ### ② RAG 十步管线卡

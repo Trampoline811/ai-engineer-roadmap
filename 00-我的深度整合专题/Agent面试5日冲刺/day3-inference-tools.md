@@ -2,7 +2,7 @@
 
 > 日期：2026-10-13（周二）上午 ｜ 覆盖层：L1 推理 ＋ L3 动作
 > 今日面试锚（A）：① "模型怎么选 / 怎么跑 / 怎么路由 / 怎么控成本？" ② "工具协议有几种变体？MCP 到底是什么？" ③ "工具有副作用——权限决策怎么做？"
-> 主阅读（提纯版）：`00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（755 行，全读，先看 5 分钟速查卡与概念层）
+> 主阅读（提纯版）：`00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（769 行，全读，先看 5 分钟速查卡与概念层）
 > L3 用现有散件收口（工具协议三变体 + MCP（模型上下文协议） + 权限/沙箱），可用 `提纯精读` 线索快速定位
 
 ---
@@ -11,7 +11,7 @@
 
 | 路径 | 状态 | 行数/大小 |
 |---|:--:|---|
-| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | ✅ 已就绪 | 755 |
+| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | ✅ 已就绪 | 769 |
 | `05-model-route\README.md` | ✅ | 52（自带"面试清单→代码映射"，先读它） |
 | `05-model-route\01\main.py` + `01\breaker\circuit_breaker.py` | ✅ | 60 / 61 |
 | `05-model-route\02\main.py` + `02\cache\exact_cache.py` | ✅ | 55 / 19 |
@@ -47,7 +47,7 @@
 | 时段 | 动作 | 具体内容 | 产出 |
 |---|---|---|---|
 | 08:00-08:30 | 主动回忆 | 闭卷口述 D2 三问 | 3 答记录 |
-| 08:30-09:40 | L1 概念 | `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（755 行）全读，速查卡与概念层优先 | L1 选型卡 |
+| 08:30-09:40 | L1 概念 | `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（769 行）全读，速查卡与概念层优先 | L1 选型卡 |
 | 09:40-10:25 | L1 跑实证 | 跑 `05-model-route\01\main.py`（熔断重试）、`05-model-route\05\main.py`（路由+回退+计费）、`05-model-route\10\main.py`（语义缓存）、`05-model-route\11\main.py`（治理三段式），看打印输出 | 四段输出能与选型卡对上 |
 | 10:25-11:00 | L3 协议 | 工具协议三变体：`01-Agent\00-llm_function_call.py`（334，原生 tools JSON）、`01-Agent\01-small-llm-function-call-project\README.md`（171）、`01-Agent\02-Agent_react\agent\tools\__init__.py`（24，注册中心）；MCP：`06-harnes\learn-claude-code\s19_mcp_plugin\README.md`（282）+ `12-hermes-agent-small\waku\tools\mcp_client.py`（100） | 工具协议对照表 |
 | 11:00-11:25 | 写码挑战③ | 闭卷写一个工具的 schema 与分发函数（见下，25 分钟） | 差异点笔记 |
@@ -58,7 +58,7 @@
 
 ---
 
-## 写码挑战③（45min，闭卷）
+## 写码挑战③（25 分钟，闭卷）
 
 不看代码写两段东西：
 
@@ -79,7 +79,7 @@
 4. 什么时候不该上路由/网关？（提示：异质模型间提示词不一致会导致语义漂移）
 5. 按任务分层用模型怎么分？"4B 小模型做固定 task"的判据是什么？
 6. 工具协议三变体各自的 trade-off（取舍）？（原生 tools JSON / 注册中心 / 手写 Action 文本协议）
-7. MCP 是什么形状？（tools（工具）/ resources（资源）/ prompts（提示模板）三原语；stdio → Streamable HTTP；OAuth 2.1）为什么说"MCP 底层还是 tool call"？
+7. MCP 是什么形状？（tools（工具）/ resources（资源）/ prompts（提示模板）三原语；stdio → Streamable HTTP；OAuth 2.1）为什么说"MCP 底层还是 tool call（工具调用）"？
 8. 工具权限决策怎么做？prompt injection（提示词注入）为什么能藏在检索内容里？
 
 ---
@@ -103,7 +103,7 @@
 | 路由 | 自研 / LiteLLM / 不上 | | | `05-model-route\05\pipeline\router.py` |
 | 缓存 | 精确 / 语义 / 两级 | | | `05-model-route\10\cache\semantic.py` |
 | 回退 | fallback + retry + 熔断 | | | `05-model-route\01\breaker\circuit_breaker.py` |
-| 成本治理 | before / during / after | | | `05-model-route\11\governance\` |
+| 成本治理 | before（事前）/ during（事中）/ after（事后） | | | `05-model-route\11\governance\` |
 
 ### ② 工具协议对照表
 

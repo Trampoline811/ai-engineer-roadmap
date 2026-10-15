@@ -92,23 +92,23 @@ graph TD
 | A1 | `08-hermes-agent\03-eval\README.md` | 228 | Eval 在 Hermes 架构的「事后」位置（Runtime 跑、Trace 记、Eval 评） |
 | A2 | `08-hermes-agent\03-eval\notes\README.md` | 117 | 主线 01→02→03；Test 考源码、Eval 考整条冻结轨迹 |
 | A3 | `08-hermes-agent\03-eval\notes\01_eval_invariants.md` | 168 | 行为契约 vs 变更检测（change-detector 反模式） |
-| A4 | `08-hermes-agent\03-eval\notes\02_logging_trace.md` | 229 | session_tag / Trace / Log 三套信号 + RCA 四步 |
+| A4 | `08-hermes-agent\03-eval\notes\02_logging_trace.md` | 229 | session_tag（会话标签） / Trace / Log（日志） 三套信号 + RCA（根因分析）四步 |
 | A5 | `08-hermes-agent\03-eval\notes\03_eval_harness.md` | 283 | 离线打分 + RCA、双层 A/B、Case 写关系不写全文 |
 | A6 | `08-hermes-agent\03-eval\notes\04_tests_and_eval.md` | 124 | 三份契约测试 vs Eval 的分工 |
 | A7 | `08-hermes-agent\03-eval\notes\07_test_memory_provider.md` | 251 | 记忆单 external 限制、system 静态块、tool schema 规范化 |
 | A8 | `08-hermes-agent\03-eval\demo\README.md` | 393 | 双层结构（pytest 契约 + offline harness）+ STEP 0→4 |
-| A9 | `08-hermes-agent\03-eval\demo\exports\eval_run\01_case_scores.json` | 120 | 正例 PASS / 负例 FAIL 的九项 check 真实数据 |
+| A9 | `08-hermes-agent\03-eval\demo\exports\eval_run\01_case_scores.json` | 120 | 正例 PASS（通过） / 负例 FAIL（不通过） 的九项 check 真实数据 |
 | A10 | `08-hermes-agent\03-eval\demo\exports\eval_run\03_trace_rca.md` | 47 | 负例 `wrong_tool+role_break+cache_break` RCA 实证 |
 | A11 | `08-hermes-agent\03-eval\demo\teaching\harness\rca.py` | 81 | root_cause + evidence + fix_hypothesis 三件套 |
 | A12 | `08-hermes-agent\03-eval\demo\teaching\harness\scorer.py` | 201 | score_case 九项 AND（5 期望关系 + 4 循环不变量） |
 | A13 | `08-hermes-agent\03-eval\demo\teaching\invariants\checkers.py` | 99 | role / system / tools / budget 四件 checkers 实现 |
-| B1 | `12-hermes-agent-small\waku\ops\tracing.py` | 167 | JSONL 永远开 + OTel 可选；一 run 一 root span |
+| B1 | `12-hermes-agent-small\waku\ops\tracing.py` | 167 | JSONL 永远开 + OTel 可选；一 run 一 root span（跨度） |
 | B2 | `12-hermes-agent-small\waku\ops\judge.py` | 101 | K3-as-referee（gpt-5.6-sol）、信号量 + 退避重试 |
 | B3 | `12-hermes-agent-small\waku\ops\scoring.py` | 58 | 确定性 Completion：expect_tool / expect_in_args / min_tool_calls |
-| B4 | `12-hermes-agent-small\waku\ops\release_gate.py` | 114 | deterministic 100% 必过；judge 阈值 + 退出码 |
+| B4 | `12-hermes-agent-small\waku\ops\release_gate.py` | 114 | deterministic（确定性的） 100% 必过；judge（裁判模型）阈值 + 退出码 |
 | B5 | `12-hermes-agent-small\waku\ops\show_trace.py` | 126 | 终端 trace 时间线 + 崩溃 turn 不污染后续缩进 |
 | B6 | `12-hermes-agent-small\waku\ops\compare_history.py` | 140 | Compare 竞技场独立 JSONL（不污染 state.db） |
-| B7 | `12-hermes-agent-small\evals\deterministic\README.md` | 86 | 200 条离线 case、Live marker `@pytest.mark.live` |
+| B7 | `12-hermes-agent-small\evals\deterministic\README.md` | 86 | 200 条离线 case、Live marker（联网标记） `@pytest.mark.live` |
 | B8 | `12-hermes-agent-small\evals\deterministic\test_scoring.py` | 54 | check_case 契约 + dataset.jsonl 完整性 |
 | B9 | `12-hermes-agent-small\evals\deterministic\test_judge.py` | 68 | K3 解析/夹逼/坏 JSON 降级为 None（不挂 race） |
 | B10 | `12-hermes-agent-small\evals\deterministic\test_show_trace.py` | 60 | 终端缩进 + 崩溃 turn 不污染 |
@@ -117,14 +117,14 @@ graph TD
 | B13 | `12-hermes-agent-small\docs\benchmarks.md` | 445 | 四轴评估（Speed / Cost / Completion / Quality） |
 | C1 | `02-RAG\04_RAG_Evaluation\lesson1_rag_evaluation\README.md` | 78 | RAGAS 四指标 + DeepSeek judge 跑通 |
 | C2 | `02-RAG\04_RAG_Evaluation\lesson2_rag_metrics\README.md` | 150 | 四象限诊断 + 决策树 + 三层持续评估 |
-| C3 | `99-My idea\Agent eval\01-eval.md` | 267 | Agent Eval ≠ Pass Rate；Capability vs Reliability 四维 |
+| C3 | `99-My idea\Agent eval\01-eval.md` | 267 | Agent Eval ≠ Pass Rate；Capability vs Reliability（能力 vs 可靠） 四维 |
 | D1 | `10-CICD\cicd学习大纲.md` | 251 | CI/CD + pytest + GitLab CI 串联、四门禁分流 |
 | D2 | `10-CICD\02-pytest\README.md` | 48 | 目录 + `-m` marker 分流 MR/Gate1/Daily/发版 |
 | D3 | `10-CICD\03-gitlab-ci\README.md` | 36 | `.gitlab-ci.yml` 仓库内管理；stages / rules / artifacts |
 | D4 | `05-model-route\07\trace\collector.py` | 58 | Span / Trace / SpanBuilder 极简 span 采集 |
 | D5 | `05-model-route\09\deploy\blue_green.py` | 23 | 蓝绿整包切换、回滚快、双倍资源 |
 | D6 | `05-model-route\09\deploy\canary.py` | 14 | 按 user_id 哈希稳定分流 5~10% |
-| D7 | `05-model-route\11\governance\before.py` | 20 | 事前 grounding：top_k 检索 + grounded prompt |
+| D7 | `05-model-route\11\governance\before.py` | 20 | 事前 grounding（据实）：top_k 检索 + grounded prompt |
 | D8 | `05-model-route\11\governance\during.py` | 34 | 事中：要求引用 + 置信度阈值拒答 |
 | D9 | `05-model-route\11\governance\after.py` | 27 | 事后：FeedbackRecord + 幻觉率 ≥ 阈值触发 review |
 

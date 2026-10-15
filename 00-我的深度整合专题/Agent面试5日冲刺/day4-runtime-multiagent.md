@@ -1,7 +1,7 @@
 # D4 — L4b 运行时选型（LangGraph ⊻ Hermes）+ 协同层
 
 > 日期：2026-10-13（周二）下午 ｜ 覆盖层：L4 运行时（选型与实现对照）＋ 协同层
-> 今日面试锚（A）：① "LangGraph 和 Hermes 是同一层的两条路，默认二选一，不叠两套循环"（含视频 26:13 作者当场自纠这个案例）② "多智能体 vs 单 agent 多工具，什么信号才该拆？" ③ "五个 runtime 的实现对照我会讲"
+> 今日面试锚（A）：① "LangGraph 和 Hermes 是同一层的两条路，默认二选一，不叠两套循环"（含视频 26:13 作者当场自纠这个案例）② "多智能体 vs 单 agent（智能体）多工具，什么信号才该拆？" ③ "五个 runtime（运行时）的实现对照我会讲"
 > 主阅读（提纯版）：`00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（524 行，解决选哪个）＋`00-我的深度整合专题\运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md`（780 行，它们内部怎么实现）
 
 ---
@@ -49,7 +49,7 @@
 | 14:00-14:30 | 主动回忆 | 闭卷口述 D3 三问 | 3 答记录 |
 | 14:30-15:40 | 选型 | `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（524 行）全读；再读 `00-我的深度整合专题\运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md`（780 行）的五方对照表与「同一个循环，五种写法」 | 选型口径定型（能主动提 26:13 自纠） |
 | 15:40-16:30 | 五方补齐 | hermes：`08-hermes-agent\09-lang-serial-not\README.md`（352）；waku：`12-hermes-agent-small\waku\loop\agent.py`（113）；pi：`13-pi-agent\02-agent-loop.md`；DSH：`14-deepseek-harness\01.arch.md`（296） | runtime 五方对照表成稿 |
-| 16:30-17:10 | LangGraph 实证 | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py`（80，StateGraph 节点与边）+ `backend\threads.py`（10，checkpointer 与 thread_id）；配 `.env` 试跑，跑不通不影响产出 | LangGraph 机制笔记 |
+| 16:30-17:10 | LangGraph 实证 | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py`（80，StateGraph 节点与边）+ `backend\threads.py`（10，checkpointer（检查点器）与 thread_id（线程标识））；配 `.env` 试跑，跑不通不影响产出 | LangGraph 机制笔记 |
 | 17:10-17:50 | 协同层 | `04-multiagent\multi-agent-arch\README.md`（136）+ `01.1`–`01.7` 七个模式 notebook 讲义 + `04-multiagent\09-task_routing.py`（106） | 编排模式表 + 该不该拆的判据 |
 | 17:50-18:15 | 写码挑战④ | 给 `backend\graph.py` 加一个 2 节点最小流（25 分钟，写 diff 或伪代码） | diff + 说明 |
 | 19:30-21:00 | 整合 | 框架选型矩阵终版 + 五方对照成稿 + 面试卡 7 问口述 | 本文件产出区 ①②③④ |
@@ -58,24 +58,24 @@
 
 ---
 
-## 写码挑战④（60min，5 天里唯一一次"真改"）
+## 写码挑战④（25 分钟，5 天里唯一一次"真改"）
 
 读懂 `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py`（80 行）后，加一个 2 节点最小流（例如在最终回答前插一个"reflect / 校验节点"），跑通或至少写出 diff。
 
-- 卡住就退回"写出伪代码 + 说明加在哪两个节点之间、边怎么连、state 加什么字段"，并说明为什么这样改不会破坏 checkpointer 的会话恢复。
-- 这一步的面试价值：能说出"我在 LangGraph 上真加过节点，知道 state 变更要过 reducer"。
+- 卡住就退回"写出伪代码 + 说明加在哪两个节点之间、边怎么连、state（状态）加什么字段"，并说明为什么这样改不会破坏 checkpointer 的会话恢复。
+- 这一步的面试价值：能说出"我在 LangGraph 上真加过节点，知道 state 变更要过 reducer（归约函数）"。
 
 ---
 
 ## 面试卡（今日自答，晚间口述）
 
 1. 为什么 L4 必须讲成"同层二选一"？把它讲成上下两层会导致什么工程后果？
-2. LangGraph 与 Hermes 的本质差别？（编排库 vs 成品 harness；你还要写什么）
+2. LangGraph 与 Hermes 的本质差别？（编排库 vs 成品 harness（外壳工程）；你还要写什么）
 3. "harness 五大件"是什么？（循环 / 状态 / 工具 / 停机 / 人审）在两边分别由谁提供？
 4. LangGraph：StateGraph 的节点/边/状态协议；checkpointer + thread_id 怎么实现会话恢复；Store 存什么？
 5. HITL（人工介入）为什么在金融/审批场景是刚需？（你可以用银行策略流程背景加分）人审后重放为什么要幂等键？
 6. 多智能体 vs 单 agent 多工具：什么信号说明你该拆（状态隔离 / 专长 / 并行 / 权限）？
-7. subagent（子智能体）与 tool 的区别？（工具=确定性函数；subagent=独立上下文循环）什么时候用 subagent？
+7. subagent（子智能体）与 tool（工具）的区别？（工具=确定性函数；subagent=独立上下文循环）什么时候用 subagent？
 
 ---
 
@@ -83,7 +83,7 @@
 
 1. 选型矩阵四维各一句话——中小企业你推荐什么、为什么？
 2. 手画 LangGraph chatbot 的状态流（节点 / 边 / thread_id / HITL 中断点）。
-3. 五个 runtime（运行时）的 loop（循环）分别在哪个文件？说出来。
+3. 五个 runtime 的 loop（循环）分别在哪个文件？说出来。
 
 ---
 
@@ -116,10 +116,10 @@
 | 模式 | 一句话 | 适用 | 代价 | 出处 |
 |---|---|---|---|---|
 | monolithic（单 agent 多工具） | | | | `04-multiagent\multi-agent-arch\01.1_monolithic_agent.ipynb` |
-| pipeline | | | | `04-multiagent\multi-agent-arch\01.2_pipeline_mode.ipynb` |
-| hub-and-spoke | | | | `04-multiagent\multi-agent-arch\01.3_hub_and_spoke.ipynb` |
-| blackboard | | | | `04-multiagent\multi-agent-arch\01.4_blackboard_mode.ipynb` |
-| Supervisor / HITL | | | | `04-multiagent\multi-agent-arch\02_hierarchical_multi_agent_demo.full.ipynb` |
+| pipeline（流水线） | | | | `04-multiagent\multi-agent-arch\01.2_pipeline_mode.ipynb` |
+| hub-and-spoke（中心辐射） | | | | `04-multiagent\multi-agent-arch\01.3_hub_and_spoke.ipynb` |
+| blackboard（黑板） | | | | `04-multiagent\multi-agent-arch\01.4_blackboard_mode.ipynb` |
+| Supervisor（主管）/ HITL | | | | `04-multiagent\multi-agent-arch\02_hierarchical_multi_agent_demo.full.ipynb` |
 
 ### ④ 面试卡答案 / 口述记录
 

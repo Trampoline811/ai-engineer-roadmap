@@ -7,7 +7,7 @@
 ### 1. RAG评估深度解析
 
 **核心文档：**
-- `RAG_Evaluation_Deep_Dive.md` (2,861行) - 完整的RAG评估体系
+- `RAG_Evaluation_Deep_Dive.md` (2,803行) - 完整的RAG评估体系
 - `RAG_Evaluation_Cheatsheet.ipynb`（原记载 768 行）- ⚠️ **2026-09-18 实测：该文件不在仓库中**，速查内容与实战代码目前内嵌在 `RAG_Evaluation_Deep_Dive.md` 里；引用时不要声称已有此 notebook
 
 **配套Notebooks：**
@@ -34,7 +34,7 @@
 ### 2. Agent记忆深度解析
 
 **核心文档：**
-- `Agent_Memory_Deep_Dive.md` (1,531行) - Agent记忆完整体系
+- `Agent_Memory_Deep_Dive.md` (1,570行) - Agent记忆完整体系
 
 **配套Notebooks：**
 - `01-windowed_memory.ipynb` - 滑动窗口记忆实现
@@ -60,7 +60,7 @@
 ### 3. 循环工程深度解析（L4a · D1）
 
 **核心文档：**
-- `循环工程深度解析\Loop_Engineering_Deep_Dive.md`（567 行）- `09-loop-engineering\` 三文（484+445+424）蒸馏
+- `循环工程深度解析\Loop_Engineering_Deep_Dive.md`（945 行）- `09-loop-engineering\` 三文（484+445+424）蒸馏
 
 **特色内容：**
 - ✅ **全文地图（零基础入口）**：Loop 一句话说清 + 三篇=一件事的三个阶段 + 逻辑链 + **术语人话对照表** + 30 秒面试答法；文内结构为「总(地图)→分(三层)→查(附录)」
@@ -73,7 +73,7 @@
 ### 4. 推理与路由深度解析（L1 · D3）
 
 **核心文档：**
-- `推理与路由深度解析\Model_Route_Deep_Dive.md`（755 行）- `05-model-route\` 11 个模块 + `07-llm_from_scrach` 概念
+- `推理与路由深度解析\Model_Route_Deep_Dive.md`（769 行）- `05-model-route\` 11 个模块 + `07-llm_from_scrach` 概念
 
 **特色内容：**
 - ✅ 路由/回退/熔断/缓存/计费/治理 11 个模块的机制与伪代码
@@ -85,8 +85,8 @@
 ### 5. 运行时选型深度解析（L4 · D4）
 
 **核心文档：**
-- `Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（312 行）- **选哪个**：同层二选一、Hermes 是什么、语言门槛、D4 入门路径
-- `运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md`（616 行）- **内部怎么实现**：五方对照 + "同一个循环，五种写法"
+- `Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（524 行）- **选哪个**：同层二选一、Hermes 是什么、语言门槛、D4 入门路径
+- `运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md`（780 行）- **内部怎么实现**：五方对照 + "同一个循环，五种写法"
 
 **特色内容：**
 - ✅ LangGraph / Hermes / waku / pi / DSH 五方横向对照（loop 出处到文件中行）
@@ -186,7 +186,7 @@ jupyter notebook
 
 - **整理时间**：2026-07-20
 - **基于版本**：juliepy/AI-Engineer-from-scrach @ main (commit: d5dbb35)
-- **文档总量**：4,370 行深度整合内容
+- **文档总量**：4,373 行深度整合内容
 - **最后更新**：2026-09-05（迁移到独立专题目录）
 
 ---
@@ -200,8 +200,8 @@ jupyter notebook
 3. **面试准备困难** - 要点分散在多个文件中，难以快速复习
 
 因此创建了这个专题，将：
-- 4 篇 Memory notebooks → 整合成 1,531 行完整体系
-- 6 篇 RAG Evaluation notebooks → 整合成 2,861 行评估框架
+- 4 篇 Memory notebooks → 整合成 1,570 行完整体系
+- 6 篇 RAG Evaluation notebooks → 整合成 2,803 行评估框架
 - 加入三层递进结构（概念→计算→工程）
 - 提炼面试卡片和避坑清单
 

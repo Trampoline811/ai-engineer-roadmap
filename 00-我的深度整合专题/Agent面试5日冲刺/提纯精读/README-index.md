@@ -42,7 +42,7 @@
 |---|---|:--:|:--:|---|
 | `00-我的深度整合专题\循环工程深度解析\Loop_Engineering_Deep_Dive.md` | `09-loop-engineering\` 三文（484+445+424） | L4a | **D1** | ✅ 945 行（📍溯源节在 L11） |
 | `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` | `08-hermes-agent\09-lang-serial-not`、`01-arch`、`12-hermes-agent-small`、`13-pi-agent`、`14-deepseek-harness`、`11-langgraph\02` | L4 | **D4** | ✅ 524 行（回答"同层二选一 + 语言门槛"） |
-| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | `05-model-route\` 11 模块 + `07-llm_from_scrach`（注意力/KV cache/MoE/GRPO） | L1 | **D3** | ✅ 就绪（755 行） |
+| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | `05-model-route\` 11 模块 + `07-llm_from_scrach`（注意力/KV cache/MoE/GRPO） | L1 | **D3** | ✅ 就绪（769 行） |
 | `00-我的深度整合专题\运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md` | `11-langgraph`(3 项目) + `08-hermes-agent` + `12-hermes-agent-small` + `13-pi-agent` + `14-deepseek-harness` + `04-multiagent` | L4 | **D4** | ✅ 就绪（780 行） |
 | `00-我的深度整合专题\观测与评测深度解析\Observability_Eval_Deep_Dive.md` | `08-hermes-agent\03-eval` + `12-hermes-agent-small\waku\ops`+`evals` + `02-RAG\04_RAG_Evaluation` + `99-My idea\Agent eval` + `10-CICD` + `05-model-route` 07/08/09/11 | L5 | **D5** | ✅ 就绪（744 行） |
 
@@ -54,7 +54,7 @@
 
 ## 与已有专题的关系（不重造）
 
-- 记忆：`00-我的深度整合专题\Agent记忆深度解析\Agent_Memory_Deep_Dive.md`（1531 行）已覆盖 03-memory 四 notebook → **P2 只补实现对照**，不重做。
+- 记忆：`00-我的深度整合专题\Agent记忆深度解析\Agent_Memory_Deep_Dive.md`（1570 行）已覆盖 03-memory 四 notebook → **P2 只补实现对照**，不重做。
 - RAG 评估：`00-我的深度整合专题\RAG评估深度解析\RAG_Evaluation_Deep_Dive.md`（2803 行）已完备 → D2/D5 **直接复用**。
 - 插件源码速览：`00-我的深度整合专题\Agent面试5日冲刺\prep0-plugin-memory-arch.md`（29 行）→ D2 预习；插件源码在仓库外 `~/.dsh/profiles/web/node_modules/dsh-memory-evolve/lib/`。
 

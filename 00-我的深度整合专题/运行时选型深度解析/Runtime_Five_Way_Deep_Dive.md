@@ -82,7 +82,7 @@ flowchart TD
 |------|--------|------|---------------|
 | 选型卡 | `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` | 524 | 衔接卡；本文不复述其已写结论 |
 | LangGraph | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\{graph,llm,rag,threads}.py` + `frontend\hitl.py` | 80/106/92/10/183 | **最小可跑成品**：StateGraph + SqliteSaver + HITL；DeepSeek ChatOpenAI + BGE；`@tool` RAG；thread_id（线程标识） 反查；`Command(resume)` |
-| 多 Agent | `11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\backend\{graph.py, state.py, runner.py}` | 27/13/126 | 顺序 handoff：flight→hotel→itinerary→final |
+| 多 Agent | `11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\backend\{graph.py, state.py, runner.py}` | 27/13/126 | 顺序 handoff（移交）：flight→hotel→itinerary→final |
 | Hermes 鸟瞰 | `08-hermes-agent\01-arch.md`（§1-§3.3） | 657 | Session 冻结 vs Turn（轮次） 组装 |
 | Hermes 循环 | `08-hermes-agent\02-run-agent\{README.md, notes\1_agent_loop.md, notes\2_tools_discovery.md, notes\4_run_conversation_callflow.md, hermes_src\agent\conversation_loop.py}` | 248/120/84/367/5355 | call flow + while 骨架 + 三道刹车 + 截胡 + 真源码 prologue/while |
 | Hermes forwarder | `08-hermes-agent\hermes-study\run_agent.py` | 6055（仅头注） | `AIAgent.run_conversation` 是 forwarder（行 24-72） |
@@ -727,7 +727,7 @@ flowchart TD
 
 ## 附录 A：本文引用的仓库文件（仓库根相对全路径）
 
-- `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（312 行）
+- `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（524 行）
 - `04-multiagent\01-single_vs_multi.py`（102 行）/ `03-phase_state_machine.py`（92 行）/ `04-langgraph_style.py`（97 行）/ `09-task_routing.py`（106 行）/ `10-conflict_resolution.py`（74 行）/ `multi-agent-arch\README.md`（136 行）
 - `08-hermes-agent\01-arch.md`（657 行，仅读 §1-§3.3 + §6.2）/ `02-run-agent\README.md`（248 行）
 - `08-hermes-agent\02-run-agent\notes\1_agent_loop.md`（120 行）/ `2_tools_discovery.md`（84 行）/ `4_run_conversation_callflow.md`（367 行）
