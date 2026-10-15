@@ -34,7 +34,7 @@
 ### 2. Agent记忆深度解析
 
 **核心文档：**
-- `Agent_Memory_Deep_Dive.md` (1,509行) - Agent记忆完整体系
+- `Agent_Memory_Deep_Dive.md` (1,531行) - Agent记忆完整体系
 
 **配套Notebooks：**
 - `01-windowed_memory.ipynb` - 滑动窗口记忆实现
@@ -73,7 +73,7 @@
 ### 4. 推理与路由深度解析（L1 · D3）
 
 **核心文档：**
-- `推理与路由深度解析\Model_Route_Deep_Dive.md`（623 行）- `05-model-route\` 11 个模块 + `07-llm_from_scrach` 概念
+- `推理与路由深度解析\Model_Route_Deep_Dive.md`（755 行）- `05-model-route\` 11 个模块 + `07-llm_from_scrach` 概念
 
 **特色内容：**
 - ✅ 路由/回退/熔断/缓存/计费/治理 11 个模块的机制与伪代码
@@ -98,7 +98,7 @@
 ### 6. 观测与评测深度解析（L5 · D5）
 
 **核心文档：**
-- `观测与评测深度解析\Observability_Eval_Deep_Dive.md`（546 行）
+- `观测与评测深度解析\Observability_Eval_Deep_Dive.md`（744 行）
 
 **特色内容：**
 - ✅ 失败归因链（RAG→解析→记忆→mem0→工具→loop→模型→微调）
@@ -110,16 +110,16 @@
 
 ### 7. Agent 面试 5 日冲刺（计划与日卡 · 2026-09）
 
-**入口：** `Agent面试5日冲刺\README.md`（**六层栈 v2 总纲**）
+**入口：** `Agent面试5日冲刺\README.md`（**六层 v2 总纲**）
 
 | 文件 | 内容 |
 |---|---|
-| `Agent面试5日冲刺\README.md` | 六层栈 L1-L6 总图、层×天映射、全仓覆盖矩阵、文件核验机制、决策记录 |
-| `Agent面试5日冲刺\day1-loop-harness.md` | D1（9/18）总纲 + L4a 循环与 Harness |
-| `Agent面试5日冲刺\day2-context.md` | D2（9/19）L2 上下文：记忆 + 知识 |
-| `Agent面试5日冲刺\day3-inference-tools.md` | D3（9/20）L1 推理 + L3 动作 |
-| `Agent面试5日冲刺\day4-runtime-multiagent.md` | D4（9/21）L4b 运行时选型 + 协同 |
-| `Agent面试5日冲刺\day5-observability-closeout.md` | D5（9/22）L5 观测 + L6 界面 + 收口 |
+| `Agent面试5日冲刺\README.md` | 六层 L1-L6 总图、层×天映射、全仓覆盖矩阵、文件核验机制、决策记录 |
+| `Agent面试5日冲刺\day1-loop-harness.md` | D1（09-18）总纲 + L4a 循环与 Harness |
+| `Agent面试5日冲刺\day2-context.md` | D2（10-12）L2 上下文：记忆 + 知识 |
+| `Agent面试5日冲刺\day3-inference-tools.md` | D3（10-13 上午）L1 推理 + L3 动作 |
+| `Agent面试5日冲刺\day4-runtime-multiagent.md` | D4（10-13 下午）L4b 运行时选型 + 协同 |
+| `Agent面试5日冲刺\day5-observability-closeout.md` | D5（10-14）L5 观测 + L6 界面 + 收口 |
 | `Agent面试5日冲刺\核验脚本.py` | **路径真实性核验**：扫描全部 md 的反引号路径，报告 OK/OK~/AMBIG/PLANNED/MISS |
 | `Agent面试5日冲刺\提纯精读\README-index.md` | P 文档与模块专题的索引与规范 |
 
@@ -165,7 +165,7 @@
 
 ---
 
-## 🛠️ 技术栈与依赖
+## 🛠️ 使用的技术与依赖
 
 **核心技术：**
 - Python 3.9+
@@ -200,7 +200,7 @@ jupyter notebook
 3. **面试准备困难** - 要点分散在多个文件中，难以快速复习
 
 因此创建了这个专题，将：
-- 4 篇 Memory notebooks → 整合成 1,509 行完整体系
+- 4 篇 Memory notebooks → 整合成 1,531 行完整体系
 - 6 篇 RAG Evaluation notebooks → 整合成 2,861 行评估框架
 - 加入三层递进结构（概念→计算→工程）
 - 提炼面试卡片和避坑清单

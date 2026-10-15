@@ -1,28 +1,28 @@
-# Agent 面试 5 日冲刺 v2 · 六层栈版
+# Agent 面试 5 日冲刺 v2 · 六层版
 
-> 目标：面试前用 5 天把本仓库从"作者的线性教学序"翻转为"**六层栈 + 一条消息的一生**"的面试冲刺序，每天 8-9h。
+> 目标：面试前用 5 天把本仓库从"作者的线性教学序"翻转为"**六层 + 一条消息的一生**"的面试冲刺序，每天 8-9h。
 >
-> **v2 改版说明（2026-09-18）**：主轴从"一条消息的一生"**升级为"六层栈（L1→L6）为骨架、一条消息的一生为纵轴"**。
-> 起因：参考源《开源 AI Agent 从底层逻辑到落地》（B站 AI_Julie，BV1wLYy62EnS）给出了**六层栈**这套
+> **v2 改版说明（2026-09-18）**：主轴从"一条消息的一生"**升级为"六层（L1→L6）为骨架、一条消息的一生为纵轴"**。
+> 起因：参考源《开源 AI Agent 从底层逻辑到落地》（B站 AI_Julie，BV1wLYy62EnS）给出了**六层**这套
 > "最后都要落到同样层数"的落地框架，且明说"**面试时把每一层讲清楚，面试官会觉得你知识面广、架构强**"。
 >
 > **参考源（仓库外，只读）**：`E:\AI_resource\personal-knowledge\archives\bilibili\AI_Julie\开源AI-Agent从底层逻辑到落地_y62EnS\extracted.md`
-> （1353 行，含六层栈总表、逐层选型、失败归因链、面试怎么讲；核心内容已摘录进本文件第 1 节，**不依赖外部路径也能用**）
+> （1353 行，含六层总表、逐层选型、失败归因链、面试怎么讲；核心内容已摘录进本文件第 1 节，**不依赖外部路径也能用**）
 >
-> **MDA 类比（第一原则）**：面试那天 = **A**（能白板画六层栈 + 答系统设计 + 讲验证过的项目）；跑通的 demo 与亲手填的对照表 = **D**；六层的内核机制 = **M**（按需深挖，不线性刷）。
+> **MDA 类比（第一原则）**：面试那天 = **A**（能白板画六层 + 答系统设计 + 讲验证过的项目）；跑通的 demo 与亲手填的对照表 = **D**；六层的内核机制 = **M**（按需深挖，不线性刷）。
 >
 > **基线**：D1 完成于 2026-09-18；面试定在 **2026-10-16（周五）**，剩余 D2–D5 压进 10-12 至 10-15（10-13 一天过 D3+D4，10-15 整天演练）；每天 8h+ 封顶 9h；动手基线 = 能读懂代码 → 每日一次写码渐进挑战。
 
 ---
 
-## 0. 为什么把主轴换成「六层栈」
+## 0. 为什么把主轴换成「六层」
 
 **旧主轴的短板**：`一条消息的一生` 讲的是**运行时内部**（循环→记忆→RAG→协同→评测），它回答"Agent 怎么运转"，
 但回答不了面试官更常问的另一半——"**这套系统要落地，你得挨个定哪些事？**"
 
-**六层栈补的正是这一半**：
+**六层补的正是这一半**：
 
-| 对比 | 三段论（LLM + Memory + Tools） | **六层栈** |
+| 对比 | 三段论（LLM + Memory + Tools） | **六层** |
 |---|---|---|
 | 回答的问题 | Agent **由什么组成** | 要落地我**得挨个定哪些事** |
 | 覆盖范围 | 能力构成 | 一个可交付系统的**全部工程决策** |
@@ -40,33 +40,16 @@
 
 ---
 
-## 1. 六层栈总图（本计划骨架）
+## 1. 六层总图（本计划骨架）
 
-```
-用户 / 客户
-   │
-   ▼
-┌────────────────────────────────────────────────────────────────┐
-│ L6 界面      Open WebUI / AnythingLLM（成品）                    │  原则：界面是栈顶，
-│              或自写：Chainlit / Streamlit / Gradio / React 系     │  不替系统的智力；越简单越好
-├────────────────────────────────────────────────────────────────┤
-│ L5 观测      Trace：Langfuse / Arize Phoenix / Braintrust        │  "没有 traces 你只是在猜"；
-│              Eval：Ragas / Promptfoo / DeepEval                  │  先建 30 条真实用例；
-│              护栏：NeMo Guardrails / Guardrails AI（≠安全策略）   │  失败归因链 8 步
-├────────────────────────────────────────────────────────────────┤
-│ L4 运行时    LangGraph（图编排库）  ⊻  Hermes（成品 harness）     │  ★同层二选一，不叠加★
-│              （+ 本仓库的 waku / pi / DSH 三个同类实证）           │  它们都已含：循环/状态/工具/停机/人审
-├────────────────────────────────────────────────────────────────┤
-│ L3 动作      MCP（发现并调用能力）+ OpenAPI/REST + OpenTelemetry  │  工具会改世界 → 最小权限 /
-│              （另见 A2A agent 间、AG-UI 接前端）；工具=Firecrawl   │  沙箱 / 人审 / 检索内容不可信
-├────────────────────────────────────────────────────────────────┤
-│ L2 上下文    知识 = RAG（十步管线；向量库只是第 6 步）            │  ⚠️ 向量库 ≠ RAG；
-│              记忆 = Mem0（抽取事实→更新→按需召回）                │  先查解析，再调检索
-├────────────────────────────────────────────────────────────────┤
-│ L1 推理      开放权重（HF 找 / Artificial Analysis 看榜）         │  应用调稳定的内部接口，
-│              引擎：Ollama·llama.cpp（本地）｜vLLM·SGLang（并发）  │  换模型只改配置
-│              路由：LiteLLM（路由/重试/预算/回退/可观测钩子）       │  按任务分层用模型 + 兜底
-└────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    U["用户 / 客户"] --> L6["L6 界面<br/>Open WebUI / AnythingLLM（成品）<br/>或自写：Chainlit / Streamlit / Gradio / React 系<br/>原则：界面在最顶层，不替系统的智力；越简单越好"]
+    L6 --> L5["L5 观测<br/>Trace：Langfuse / Arize Phoenix / Braintrust<br/>Eval：Ragas / Promptfoo / DeepEval<br/>护栏：NeMo Guardrails / Guardrails AI（≠安全策略）<br/>“没有 traces 你只是在猜”；先建 30 条真实用例；失败归因链 8 步"]
+    L5 --> L4["L4 运行时<br/>LangGraph（图编排库）⊻ Hermes（成品 harness）<br/>（+ 本仓库的 waku / pi / DSH 三个同类实证）<br/>★同层二选一，不叠加★；它们都已含：循环/状态/工具/停机/人审"]
+    L4 --> L3["L3 动作<br/>MCP（发现并调用能力）+ OpenAPI/REST + OpenTelemetry<br/>（另见 A2A agent 间、AG-UI 接前端）；工具=Firecrawl<br/>工具会改世界 → 最小权限 / 沙箱 / 人审 / 检索内容不可信"]
+    L3 --> L2["L2 上下文<br/>知识 = RAG（十步管线；向量库只是第 6 步）<br/>记忆 = Mem0（抽取事实→更新→按需召回）<br/>⚠️ 向量库 ≠ RAG；先查解析，再调检索"]
+    L2 --> L1["L1 推理<br/>开放权重（HF 找 / Artificial Analysis 看榜）<br/>引擎：Ollama·llama.cpp（本地）｜vLLM·SGLang（并发）<br/>路由：LiteLLM（路由/重试/预算/回退/可观测钩子）<br/>应用调稳定的内部接口，换模型只改配置；按任务分层用模型 + 兜底"]
 ```
 
 ### 1.1 每层 = 一个面试答案（本仓库实证映射）
@@ -78,48 +61,41 @@
 | **L3** | MCP + OpenAPI + OTel（+A2A/AG-UI）；Firecrawl | `01-Agent`（工具协议三变体）；`06-harnes\learn-claude-code\s02/s03/s19`；`08-hermes-agent\hermes-study\tools\registry.py`（801 行）+ `08-hermes-agent\05-env\hermes_src\tools\environments\`（docker/local/ssh/daytona/modal 沙箱阶梯）；`12-hermes-agent-small\waku\tools`+`mcp_client.py`；`05-model-route\08`（schema/whitelist/executor） | "MCP 底层还是 tool call，很多 MCP server 只是坐在 REST 前面的适配器；**危险在于工具有副作用**→只读当不可信文本、改外部状态先人审、跑代码进沙箱" |
 | **L4** | LangGraph **或** Hermes（二选一） | `09-loop-engineering` 三文；`06-harnes\learn-claude-code` s01-s20；`11-langgraph` 三项目；`08-hermes-agent` 九模块；`12-hermes-agent-small`(waku)；`13-pi-agent`；`14-deepseek-harness`；`01-Agent` 五范式 | "两者都已自带 harness，是**同层替代**；选型先确认互斥关系，避免两套循环，然后按'业务工作流 vs 终端里干活'选" |
 | **L5** | Langfuse / Phoenix / Braintrust；Ragas / Promptfoo / DeepEval；NeMo / Guardrails AI | `08-hermes-agent\03-eval`（invariants + trace RCA）；`12-hermes-agent-small\waku\ops`+`evals`（30 个确定性测试 + judge + release_gate + dashboard）；`02-RAG\04_RAG_Evaluation`；`99-My idea\Agent eval`；`10-CICD`；已有 `RAG评估深度解析` | "失败归因链：RAG→解析→记忆→mem0→工具→loop→模型→微调；**护栏库 ≠ 安全策略**，真正的控制层是权限/沙箱/校验/密钥隔离/审计/人审" |
-| **L6** | Open WebUI / AnythingLLM | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend`（chat 207 行 + **hitl.py 183 行**）+ `11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\frontend\static\script.js`；`12-hermes-agent-small\waku\gateway`（telegram / voice / cli） | "界面是栈顶，**不应替系统的智力**；越简单越好，模型/工具/记忆/检索放在干净接口后面才能换前端" |
+| **L6** | Open WebUI / AnythingLLM | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend`（chat 207 行 + **hitl.py 183 行**）+ `11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\frontend\static\script.js`；`12-hermes-agent-small\waku\gateway`（telegram / voice / cli） | "界面在最顶层，**不应替系统的智力**；越简单越好，模型/工具/记忆/检索放在干净接口后面才能换前端" |
 
 ---
 
 ## 2. 纵轴：一条用户消息的一生（挂靠层号）
 
-```
-用户消息
-   │
-   ▼
-[L6 界面] 流式输出 / 人审按钮 ────────────── D5
-   │
-   ▼
-[入口 / 会话恢复]  thread_id / session ────── L4 ── D2(checkpoint) / D4
-   │
-   ▼
-[L4 System Prompt 组装]  静态段 + 动态段（记忆/技能/环境快照）── D1(s10) / D2(记忆注入)
-   │
-   ▼
-┌──────────────────────── L4 主循环（ReAct）────────────────────────┐
-│  观察 → 思考 → 行动                                               │
-│    │                                                             │
-│    ▼                                                             │
-│  [L1 LLM 调用] 路由 / 缓存 / 回退 / 计费 ────────── D3            │
-│    │                                                             │
-│    ├─ 要调工具? ──→ [L3 工具注册表] ──→ 权限判定 ──→ 执行          │
-│    │                 ├─ MCP / OpenAPI / 内置（副作用决策树）D3     │
-│    │                 ├─ 沙箱 / 人审（HITL）────────── D3/D4       │
-│    │                 └─ tool_result 回填（上下文膨胀的源头）       │
-│    └─ 不要? ──→ [生成最终答案]                                    │
-│                                                                  │
-│  上下文膨胀 → 压缩（s08 四层）/ 记忆 / 子 Agent 隔离 ── D1/D2     │
-└──────────────────────────────────────────────────────────────────┘
-   │
-   ▼
-[L2 上下文注入]  RAG 检索 / 记忆召回 ────────────────── D2
-   │
-   ▼
-[L5 状态写入 + 观测]  轨迹落盘 / 指标 / 门禁 ────────── D5
-   │
-   ▼
-[L3 协同层] subagent / teams / 多智能体编排 ────────── D4
+```mermaid
+flowchart TD
+    MSG["用户消息"] --> L6UI["[L6 界面] 流式输出 / 人审按钮 —— D5"]
+    L6UI --> ENTRY["[入口 / 会话恢复] thread_id / session —— L4 —— D2(checkpoint) / D4"]
+    ENTRY --> SP["[L4 System Prompt 组装] 静态段 + 动态段（记忆/技能/环境快照）—— D1(s10) / D2(记忆注入)"]
+    SP --> OBS["观察 → 思考 → 行动"]
+    subgraph LOOP["L4 主循环（ReAct）"]
+        OBS
+        LLM["[L1 LLM 调用] 路由 / 缓存 / 回退 / 计费 —— D3"]
+        TOOLREG["[L3 工具注册表]"]
+        PERM["权限判定"]
+        EXEC["执行"]
+        MCPN["MCP / OpenAPI / 内置（副作用决策树）—— D3"]
+        SAND["沙箱 / 人审（HITL）—— D3/D4"]
+        FILL["tool_result 回填（上下文膨胀的源头）"]
+        FINAL["[生成最终答案]"]
+        INFLATE["上下文膨胀 → 压缩（s08 四层）/ 记忆 / 子 Agent 隔离 —— D1/D2"]
+        OBS --> LLM
+        LLM -->|要调工具?| TOOLREG
+        TOOLREG --> PERM
+        PERM --> EXEC
+        EXEC --> MCPN
+        EXEC --> SAND
+        EXEC --> FILL
+        LLM -->|不要?| FINAL
+    end
+    LOOP --> L2CTX["[L2 上下文注入] RAG 检索 / 记忆召回 —— D2"]
+    L2CTX --> L5OBS["[L5 状态写入 + 观测] 轨迹落盘 / 指标 / 门禁 —— D5"]
+    L5OBS --> L3COLLAB["[L3 协同层] subagent / teams / 多智能体编排 —— D4"]
 ```
 
 ---
@@ -131,11 +107,11 @@
 
 | 天 | 日期 | 覆盖层 | A（当天能答的面试锚） | 主产出 | 前置专题 |
 |:--:|:--:|:--:|---|---|---|
-| **D1** ✅ | 09-18 五 | **总纲 + L4a 内核** | 六层栈逐层讲 + "一条消息的一生" + 手写 ReAct | 六层栈总纲表（先填 L4 行）+ 生命周期总图 v1 + 五范式对比表 | `00-我的深度整合专题\循环工程深度解析\Loop_Engineering_Deep_Dive.md` ✅ 992 行|
-| **D2** | 10-12 一 | **L2 上下文** | "凭什么决定记什么/忘什么" + "向量库不是 RAG" | 记忆对照表（含 mem0 列）+ RAG 十步管线卡 + RAG/记忆/长上下文边界卡 | `提纯精读\P2-记忆实现对照提纯.md` ✅ 790 行 + 已有两份专题 |
-| **D3** | 10-13 二 上午 | **L1 推理 + L3 动作** | 模型怎么选/怎么跑/怎么路由 + 工具协议与权限 | L1 选型卡 + 工具协议对照表 + 权限决策树（+ 写码挑战③） | `推理与路由深度解析\Model_Route_Deep_Dive.md` ✅ 791 行|
-| **D4** | 10-13 二 下午 | **L4b 选型 + 协同** | "LangGraph 和 Hermes 是同层二选一" + 多智能体 vs 单 agent | 框架选型矩阵终版 + runtime 五方对照表（LangGraph/Hermes/waku/pi/DSH） | `运行时选型-LangGraph-vs-Hermes.md` ✅ 531 行 + `运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md` ✅ 789 行 |
-| **D5** | 10-14 三 | **L5 观测 + L6 界面 + 收口** | agent 怎么评测/怎么进 CI + 六层栈总演练 | **面试总纲 v1** + 模拟面试记录 + CICD 背题卡 | `观测与评测深度解析\Observability_Eval_Deep_Dive.md` ✅ 747 行|
+| **D1** ✅ | 09-18 五 | **总纲 + L4a 内核** | 六层逐层讲 + "一条消息的一生" + 手写 ReAct | 六层总纲表（先填 L4 行）+ 生命周期总图 v1 + 五范式对比表 | `00-我的深度整合专题\循环工程深度解析\Loop_Engineering_Deep_Dive.md` ✅ 945 行|
+| **D2** | 10-12 一 | **L2 上下文** | "凭什么决定记什么/忘什么" + "向量库不是 RAG" | 记忆对照表（含 mem0 列）+ RAG 十步管线卡 + RAG/记忆/长上下文边界卡 | `提纯精读\P2-记忆实现对照提纯.md` ✅ 797 行 + 已有两份专题 |
+| **D3** | 10-13 二 上午 | **L1 推理 + L3 动作** | 模型怎么选/怎么跑/怎么路由 + 工具协议与权限 | L1 选型卡 + 工具协议对照表 + 权限决策树（+ 写码挑战③） | `推理与路由深度解析\Model_Route_Deep_Dive.md` ✅ 755 行|
+| **D4** | 10-13 二 下午 | **L4b 选型 + 协同** | "LangGraph 和 Hermes 是同层二选一" + 多智能体 vs 单 agent | 框架选型矩阵终版 + runtime 五方对照表（LangGraph/Hermes/waku/pi/DSH） | `运行时选型-LangGraph-vs-Hermes.md` ✅ 524 行 + `运行时选型深度解析\Runtime_Five_Way_Deep_Dive.md` ✅ 780 行 |
+| **D5** | 10-14 三 | **L5 观测 + L6 界面 + 收口** | agent 怎么评测/怎么进 CI + 六层总演练 | **面试总纲 v1** + 模拟面试记录 + CICD 背题卡 | `观测与评测深度解析\Observability_Eval_Deep_Dive.md` ✅ 744 行|
 | **演练日** | 10-15 四 | **六层总演练** | 模拟面试 + 六层逐层脱稿讲 + 失败归因链 | 模拟面试记录 + 薄弱点清单 + 2–3 个真跑通的项目叙事 | 五张 day 卡 |
 | **面试** | 10-16 五 | — | — | — | — |
 
@@ -235,7 +211,7 @@ python "00-我的深度整合专题\Agent面试5日冲刺\核验脚本.py"
   `02-RAG\06 Agentic RAG`（`--mock`）、`11-langgraph\02-Agentic-Chatbot-using-LangGraph\` chatbot（BGE 本地 + DeepSeek key）、`12-hermes-agent-small\`（uv + 一把 key）。
 - ✅ **纯 CPU 无 GPU 的现实**：够走通全链路与调试，不够做并发服务（与"本地跑通 + 生产用托管 API / 小模型兜底"一致）。
 - ✅ **诚实标注**：① mem0 列 = 作者详解实证（`99-My idea\AI Agent 学习指南\01.longterm memory.md` 965 行），**非源码级**；
-  ② 六层栈的选型清单来自 UP主配套笔记（其原文件 `02.opensource_AI.md` 未上传，本地只有截图还原稿）；
+  ② 六层的选型清单来自 UP主配套笔记（其原文件 `02.opensource_AI.md` 未上传，本地只有截图还原稿）；
   ③ 视频口述对 LangGraph 有情绪化否定，**笔记侧中立**——面试用笔记的对比表，口述批评只作反面观点。
 
 ---
@@ -249,7 +225,7 @@ python "00-我的深度整合专题\Agent面试5日冲刺\核验脚本.py"
 | 3 | 打卡闭环 | AI 每日早晨发今日卡，晚间回 3 答，产出入文件 |
 | 4 | 插件能力进冲刺（09-07） | dtodo 固化日程；技能 `daily-sprint-coach`；每日情绪反馈；D2 对照表加 `dsh-memory-evolve` 生产实证列 |
 | 5 | 顺延与 mem0 调优（09-08） | 全部顺延；mem0 列升级为"作者详解实证" |
-| 6 | **主轴换六层栈（09-18）** | 主轴 = 六层栈 L1-L6；D1 加"六层总纲"；L4 明确**同层二选一**；产出加《六层栈总纲表》 |
+| 6 | **主轴换六层（09-18）** | 主轴 = 六层 L1-L6；D1 加"六层总纲"；L4 明确**同层二选一**；产出加《六层总纲表》 |
 | 7 | **日期重锚（09-18）** | D1=9/18 … D5=9/22；day 文件按层重命名为 `dayN-<层>-<主题>.md`，旧 4 份合并删除 |
 | 8 | **多文件模块一律先做专题（09-18）** | 用户要求：凡"一个文件夹下多个子文件"的模块，先蒸馏成专题（仿现有 Deep_Dive 格式 + 📍溯源节），再精读；不再直接散读源文件 |
 | 9 | **二次日期重锚（10-12）** | 面试定在 10-16；D2=10-12、D3+D4=10-13（一天两个 day）、D5=10-14、10-15 整天演练；压缩规则 = 只读专题文档不回源、产出区照填、写码挑战压到 25 分钟 |
@@ -259,5 +235,5 @@ python "00-我的深度整合专题\Agent面试5日冲刺\核验脚本.py"
 ## 10. 10-15 演练日（面试前一天只做三件事）
 
 1. 简历项目叙事打磨（只用 5 天里**真正跑通**的 2-3 个 demo）。
-2. 二次模拟面试（换题自问自答，重点练"六层栈逐层答"）。
+2. 二次模拟面试（换题自问自答，重点练"六层逐层答"）。
 3. 按《面试总纲 v1》薄弱点回炉，不学新知识。

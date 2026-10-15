@@ -1,18 +1,18 @@
 # D3 — L1 推理 + L3 动作：模型·引擎·路由 + 协议·工具
 
-> **日期：2026-10-13（周二）上午** ｜ 覆盖层：**L1 推理 ＋ L3 动作**
-> **今日面试锚（A）**：① "模型怎么选 / 怎么跑 / 怎么路由 / 怎么控成本？" ② "工具协议有几种变体？MCP 到底是什么？" ③ "工具有副作用——权限决策怎么做？"
-> **主阅读（提纯版）**：`00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（791 行，全读，先看 5 分钟速查卡与概念层）
-> L3 用现有散件收口（工具协议三变体 + MCP + 权限/沙箱），可用 `提纯精读` 线索快速定位
+> 日期：2026-10-13（周二）上午 ｜ 覆盖层：L1 推理 ＋ L3 动作
+> 今日面试锚（A）：① "模型怎么选 / 怎么跑 / 怎么路由 / 怎么控成本？" ② "工具协议有几种变体？MCP 到底是什么？" ③ "工具有副作用——权限决策怎么做？"
+> 主阅读（提纯版）：`00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（755 行，全读，先看 5 分钟速查卡与概念层）
+> L3 用现有散件收口（工具协议三变体 + MCP（模型上下文协议） + 权限/沙箱），可用 `提纯精读` 线索快速定位
 
 ---
 
-## 📎 本日文件核验（逐路径实测）
+## 本日文件核验（逐路径实测）
 
 | 路径 | 状态 | 行数/大小 |
 |---|:--:|---|
-| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | ✅ 已就绪 | 791 |
-| `05-model-route\README.md` | ✅ | 52（**自带"面试清单→代码映射"，先读它**） |
+| `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md` | ✅ 已就绪 | 755 |
+| `05-model-route\README.md` | ✅ | 52（自带"面试清单→代码映射"，先读它） |
 | `05-model-route\01\main.py` + `01\breaker\circuit_breaker.py` | ✅ | 60 / 61 |
 | `05-model-route\02\main.py` + `02\cache\exact_cache.py` | ✅ | 55 / 19 |
 | `05-model-route\03\main.py` + `03\runtime\two_level_cache.py` | ✅ | 81 / 20 |
@@ -37,17 +37,17 @@
 | `08-hermes-agent\05-env\hermes_src\tools\environments\docker.py` | ✅ | 1460（容器沙箱） |
 | `08-hermes-agent\05-env\README.md` | ✅ | 106 |
 
-> ⚠️ `05-model-route` 的 **07 trace / 08 guard / 09 deploy / 11 governance** 会与 D5（L5 观测）重叠：今天只做**导读级**浏览，深挖留 D5。
-> ⚠️ `07-llm_from_scrach` **只做概念卡**，不训练（本机纯 CPU 无 GPU，`part_2\train.py` 别跑）。
+> ⚠️ `05-model-route` 的 07 trace / 08 guard / 09 deploy / 11 governance 会与 D5（L5 观测）重叠：今天只做导读级浏览，深挖留 D5。
+> ⚠️ `07-llm_from_scrach` 只做概念卡，不训练（本机纯 CPU 无 GPU，`part_2\train.py` 别跑）。
 
 ---
 
-## ⏱ 时间盒（压缩版，08:00-12:35，半天过完）
+## 时间盒（压缩版，08:00-12:35，半天过完）
 
 | 时段 | 动作 | 具体内容 | 产出 |
 |---|---|---|---|
 | 08:00-08:30 | 主动回忆 | 闭卷口述 D2 三问 | 3 答记录 |
-| 08:30-09:40 | L1 概念 | `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（791 行）全读，速查卡与概念层优先 | L1 选型卡 |
+| 08:30-09:40 | L1 概念 | `00-我的深度整合专题\推理与路由深度解析\Model_Route_Deep_Dive.md`（755 行）全读，速查卡与概念层优先 | L1 选型卡 |
 | 09:40-10:25 | L1 跑实证 | 跑 `05-model-route\01\main.py`（熔断重试）、`05-model-route\05\main.py`（路由+回退+计费）、`05-model-route\10\main.py`（语义缓存）、`05-model-route\11\main.py`（治理三段式），看打印输出 | 四段输出能与选型卡对上 |
 | 10:25-11:00 | L3 协议 | 工具协议三变体：`01-Agent\00-llm_function_call.py`（334，原生 tools JSON）、`01-Agent\01-small-llm-function-call-project\README.md`（171）、`01-Agent\02-Agent_react\agent\tools\__init__.py`（24，注册中心）；MCP：`06-harnes\learn-claude-code\s19_mcp_plugin\README.md`（282）+ `12-hermes-agent-small\waku\tools\mcp_client.py`（100） | 工具协议对照表 |
 | 11:00-11:25 | 写码挑战③ | 闭卷写一个工具的 schema 与分发函数（见下，25 分钟） | 差异点笔记 |
@@ -58,7 +58,7 @@
 
 ---
 
-## ⚔️ 写码挑战③（45min，闭卷）
+## 写码挑战③（45min，闭卷）
 
 不看代码写两段东西：
 
@@ -67,24 +67,24 @@
 # 2) 工具分发函数：从模型输出里取出 tool_call → 校验参数 → 查白名单 → 执行 → 回填 tool_result
 ```
 
-写完对照 `01-Agent\02-Agent_react\agent\tools\__init__.py`（注册表写法）与 `05-model-route\08\guard\`（校验+白名单+执行三段式），把差异写进笔记。差异通常出现在：**参数校验位置**、**白名单判定时机**、**错误信息是否可行动**。
+写完对照 `01-Agent\02-Agent_react\agent\tools\__init__.py`（注册表写法）与 `05-model-route\08\guard\`（校验+白名单+执行三段式），把差异写进笔记。差异通常出现在：参数校验位置、白名单判定时机、错误信息是否可行动。
 
 ---
 
-## 🎴 面试卡（今日自答，晚间口述）
+## 面试卡（今日自答，晚间口述）
 
 1. L1 层你到底要定哪几件事？（开放权重 vs 闭源 / 本地引擎 vs 并发引擎 / 路由 / 按任务分层 / 兜底）
 2. Ollama+llama.cpp 与 vLLM/SGLang 的分工是什么？为什么"重复前缀"场景会提 SGLang？
-3. LiteLLM 这类路由层解决什么？（Routing / Retries / Budgets / Fallbacks / Observability Hooks）
-4. **什么时候不该上路由/网关？**（提示：异质模型间提示词不一致会导致语义漂移）
+3. LiteLLM 这类路由层解决什么？（Routing（路由）/ Retries（重试）/ Budgets（预算控制）/ Fallbacks（降级回退）/ Observability Hooks（观测钩子））
+4. 什么时候不该上路由/网关？（提示：异质模型间提示词不一致会导致语义漂移）
 5. 按任务分层用模型怎么分？"4B 小模型做固定 task"的判据是什么？
-6. 工具协议三变体各自的 trade-off？（原生 tools JSON / 注册中心 / 手写 Action 文本协议）
-7. MCP 是什么形状？（tools / resources / prompts 三原语；stdio → Streamable HTTP；OAuth 2.1）为什么说"MCP 底层还是 tool call"？
-8. 工具权限决策怎么做？prompt injection 为什么能藏在检索内容里？
+6. 工具协议三变体各自的 trade-off（取舍）？（原生 tools JSON / 注册中心 / 手写 Action 文本协议）
+7. MCP 是什么形状？（tools（工具）/ resources（资源）/ prompts（提示模板）三原语；stdio → Streamable HTTP；OAuth 2.1）为什么说"MCP 底层还是 tool call"？
+8. 工具权限决策怎么做？prompt injection（提示词注入）为什么能藏在检索内容里？
 
 ---
 
-## 🌙 晚间复盘 3 问（D4 开场口述，10-13 下午）
+## 晚间复盘 3 问（D4 开场口述，10-13 下午）
 
 1. L1 的"分层配置"用一句话讲清（成本 vs 智商）。
 2. 工具协议三变体，你推荐哪个、为什么？
@@ -115,13 +115,17 @@
 
 ### ③ 权限决策树
 
+```mermaid
+flowchart TD
+    A{"只读公开页？"} -->|"是"| B["当作不可信文本处理<br/>prompt injection 可能藏在检索内容里"]
+    A -->|"否"| C{"会改外部状态？"}
+    C -->|"是"| D["人审批再执行<br/>HITL（人工介入），注意幂等键"]
+    C -->|"否"| E{"要跑代码？"}
+    E -->|"是"| F["沙箱 / 容器"]
+    E -->|"否"| G["最小权限调用"]
 ```
-只读公开页？ ──是→ 当不可信文本（prompt injection 可能藏在检索内容里）
-   └─否→ 会改外部状态？ ──是→ 人审批再执行（HITL，注意幂等键）
-            └─否→ 要跑代码？ ──是→ 沙箱/容器
-                     └─否→ 最小权限调用
+
 （待填：每一支在本仓库的对应实现文件）
-```
 
 ### ④ 一页演进卡（LLM 概念）
 

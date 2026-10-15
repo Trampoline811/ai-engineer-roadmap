@@ -47,7 +47,7 @@
 | 目录 | 一句话 | 与课程对应 |
 |---|---|---|
 | 01-simple_harnes_demo | CLAUDE.md（规则+DoD）+ skills(/plan /implement /validate) + Stop 质量门 hook | "把 Agent 用规则和工作流包起来"，即 s04 hooks + s05 计划 + s20 的骨架版 |
-| 02-rag-harness-demo | RAG 全栈教学 harness：五阶段管道 + PostToolUse lint + Stop 质量门（阻塞式） | 工程化 RAG 项目同样吃 harness：质量门靠 hook 不靠提示词（对应 s04） |
+| 02-rag-harness-demo | 覆盖全流程的 RAG 教学 harness：五阶段管道 + PostToolUse lint + Stop 质量门（阻塞式） | 工程化 RAG 项目同样吃 harness：质量门靠 hook 不靠提示词（对应 s04） |
 
 ### 0.1 二十讲的内在顺序 = harness 能力的六个阶段（源自 README 学习路径图）
 
@@ -80,32 +80,35 @@
 
 ### 1.2 生命周期总图（把 20 讲挂到一条线上）
 
-```text
 【一次 Agent 会话的生命周期】  s01=循环; 其余 = 挂在循环上的 harness 机制（s20 总装）
 
- 触发新一轮的来源（都是"输入"）
-   ├─ 用户输入 ────────────────┐
-   ├─ cron 定时到点 (s14) ──────┤
-   ├─ 后台任务完成通知 (s13) ───┼─► UserPromptSubmit hooks (s04，可注入/拦截)
-   └─ 队友收件箱消息 (s15/s16) ─┘          │
-                                          ▼
-   ① 入口装配：压缩预处理器（若超阈值 s08）
-   ② system prompt 组装 (s10)：identity + workspace + enabled_tools
-      + 技能目录 (s07) + 记忆索引 (s09) + MCP 状态 (s19)
-                                          ▼
-   ③ 主循环 LLM 调用 (s01)  ──错误?──► 错误恢复 (s11)：max_tokens 升级 /
-       ▲                              reactive compact / 429·529 指数退避+换模型
-       │
-       │ 响应里有 tool_use 块？───否──► ④ 记忆提取 (s09) → Stop hooks (s04，
-       │                                   可强制续跑) → 返回结果
-       │是（逐个工具过流水线）
-       ▼
-   ⑤ PreToolUse hooks (s04：权限/日志/审计)  → ⑥ 权限三闸门 (s03)
-       → ⑦ 工具分发 (s02 TOOL_HANDLERS 查表；s19 mcp__server__tool 前缀；
-             s13 慢命令 → 后台线程占位返回)
-       → ⑧ 执行 → PostToolUse hooks (s04)
-       → ⑨ tool_result 追加回 messages ───────────────┘(回 ③)
- 
+```mermaid
+flowchart TD
+    subgraph SRC["触发新一轮的来源（都是'输入'）"]
+        I1["用户输入"]
+        I2["cron 定时到点 (s14)"]
+        I3["后台任务完成通知 (s13)"]
+        I4["队友收件箱消息 (s15/s16)"]
+    end
+    H["UserPromptSubmit hooks (s04，可注入/拦截)"]
+    I1 --> H
+    I2 --> H
+    I3 --> H
+    I4 --> H
+    H --> S1["① 入口装配：压缩预处理器（若超阈值 s08）"]
+    S1 --> S2["② system prompt 组装 (s10)：identity + workspace + enabled_tools + 技能目录 (s07) + 记忆索引 (s09) + MCP 状态 (s19)"]
+    S2 --> S3["③ 主循环 LLM 调用 (s01)"]
+    S3 -->|"错误?"| E["错误恢复 (s11)：max_tokens 升级 / reactive compact / 429·529 指数退避+换模型"]
+    S3 -->|"响应里有 tool_use 块？否"| S4["④ 记忆提取 (s09) → Stop hooks (s04，可强制续跑) → 返回结果"]
+    S3 -->|"是（逐个工具过流水线）"| S5["⑤ PreToolUse hooks (s04：权限/日志/审计)"]
+    S5 --> S6["⑥ 权限三闸门 (s03)"]
+    S6 --> S7["⑦ 工具分发 (s02 TOOL_HANDLERS 查表；s19 mcp__server__tool 前缀；s13 慢命令 → 后台线程占位返回)"]
+    S7 --> S8["⑧ 执行 → PostToolUse hooks (s04)"]
+    S8 --> S9["⑨ tool_result 追加回 messages"]
+    S9 -->|"回 ③"| S3
+```
+
+```text
  会话内"计划/扩展"横切件：
    s05 todo_write（会话内清单，防漂移）        ← 单 Agent 的"先想后做"
    s06 task 工具（一次性 subagent，隔离上下文）
@@ -153,7 +156,7 @@ README 总论给出 harness 工程师的五项真实工作，面试讲项目经�
 
 **01-simple_harnes_demo（极简 harness 闭环）**：三件套——①`CLAUDE.md`：Mission + Coding rules + Workflow rules + Safety rules + **Definition of done**（feature works + tests pass + validation passes，三条件缺一不算完成）；②`.claude/skills/`：`/plan`（需求→plans/*.md）、`/implement`（按计划改代码+写报告）、`/validate`（跑 scripts/validate.py 验收）三个命令级工作流；③`.claude/hooks/stop_validate.py`：**Stop 前质量门**，测试不过不让 Agent 结束。练习流程即 PIV 闭环：`/plan`（必须单独先跑，才落盘计划文件）→ `/implement` → `/validate` → 不过就 fix & retry。它的定义很直白：**harness = 不让模型自由发挥，用"规则+工作流+自动校验"把它包起来**；示例业务是 `app/password.py` 密码强度判断 + 单测。
 
-**02-rag-harness-demo（同一套包在 RAG 全栈上，教学 45 分钟版）**：
+**02-rag-harness-demo（同一套包在 RAG 全流程上，教学 45 分钟版）**：
 - AI Layer 即 CLAUDE.md：命名规范（snake_case/PascalCase/test_<module>.py/api/<resource>）、代码模式（每 RAG 阶段独立成文件、路由只做解包、LLM 调用在测试里必须 mock）、构建命令表、**硬性规则**（改 app/ 下任何文件后对应测试必须仍通过；不允许跳过 Task 验证直接标记完成；不读写真实 .env、不递归删目录）。
 - 自动化 Hook 两个：`PostToolUse` 每次编辑 `app/`、`tests/` 下 .py 后自动 `ruff check`（**建议性**：告警不阻塞，让 Agent 自修）；`Stop` 结束前自动跑 `python scripts/validate.py`（**阻塞性**：失败输出 `{"decision":"block","reason":...}` 阻止停止，Agent 收到 reason 继续修，`stop_hook_active` 防无限循环）。
 - RAG 管道五阶段各一文件：`ingest → chunk(固定长度+overlap) → index(TfidfIndex，纯 CPU 无向量库) → retrieve → generate`（基线是模板拼接，课堂练习点=换成真 LLM，Prompt 约束：只能依据 context 作答、context 空不许编造；环境变量读 key，不入代码不入 Git）。

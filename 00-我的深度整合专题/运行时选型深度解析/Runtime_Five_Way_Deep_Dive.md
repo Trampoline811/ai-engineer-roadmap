@@ -6,54 +6,32 @@
 
 ## 目录
 
-- [📍 本页定位与蒸馏溯源](#-本页定位与蒸馏溯源)
 - [0. 前言：为什么"运行时"是选型最容易翻车的一层](#0-前言为什么运行时是选型最容易翻车的一层)
-- [一、概念层：Runtime 是什么](#一概念层runtime-是什么)
-  - [1.0 统一类比：runtime = 城市交通调度中心](#10-统一类比runtime--城市交通调度中心)
-  - [1.1 Runtime 在六层栈里的位置](#11-runtime-在六层栈里的位置)
+- [📍 本页定位与蒸馏溯源](#-本页定位与蒸馏溯源)
+- [第一层 · 概念层：Runtime 是什么](#第一层--概念层runtime-是什么)
+  - [1.1 Runtime 在六层里的位置](#11-runtime-在六层里的位置)
   - [1.2 一个完整 Harness 的五个必备件](#12-一个完整-harness-的五个必备件)
-  - [1.3 为什么"编排库"与"成品 harness"容易被叠成两层](#13-为什么编排库与成品-harness-容易被叠成两层)
-  - [1.4 一个最小可跑循环的 6 步骨架](#14-一个最小可跑循环的-6-步骨架全文统一口径)
-  - [1.5 因果链：选型判断的依赖顺序](#15-因果链选型判断的依赖顺序谁是谁的前提)
-  - [1.6 📋 面试卡片（概念层）](#16--面试卡片概念层)
-- [二、实现层：五方 Runtime 横向对照](#二实现层五方-runtime-横向对照)
+  - [1.3 统一类比：runtime = 城市交通调度中心](#13-统一类比runtime--城市交通调度中心)
+  - [1.4 为什么"编排库"与"成品 harness"容易被叠成两层](#14-为什么编排库与成品-harness-容易被叠成两层)
+  - [1.5 一个最小可跑循环的 6 步骨架（全文统一口径）](#15-一个最小可跑循环的-6-步骨架全文统一口径)
+  - [1.6 因果链：选型判断的依赖顺序（谁是谁的前提）](#16-因果链选型判断的依赖顺序谁是谁的前提)
+  - [📋 面试卡片：概念层](#-面试卡片概念层)
+- [第二层 · 实现层：五方 Runtime 横向对照](#第二层--实现层五方-runtime-横向对照)
   - [2.0 本章导引：符号表 · 双模式阅读 · 学习路径](#20-本章导引符号表--双模式阅读--学习路径)
   - [2.1 五方 Runtime 对照表](#21-五方-runtime-对照表)
   - [2.2 各自关键机制（实现层细节）](#22-各自关键机制实现层细节)
-  - [2.3 📋 面试卡片（实现层）](#23--面试卡片实现层)
-- [三、同一个循环，五种写法](#三同一个循环五种写法本节是本文最重要的资产)
-- [四、工程层：选型 + 避坑](#四工程层选型--避坑)
-- [五、多智能体：什么时候值得拆](#五多智能体什么时候值得拆)
-- [六、5 分钟速查卡](#六5-分钟速查卡末尾专用)
-- [七、面试问答卡](#七面试问答卡精选-6-问与选型卡互补不重复)
-- [附录 A：本文引用的仓库文件](#附录-a本文引用的仓库文件绝对路径)
+  - [2.3 同一个循环，五种写法（本节是本文最重要的资产）](#23-同一个循环五种写法本节是本文最重要的资产)
+  - [📋 面试卡片：实现层](#-面试卡片实现层)
+- [第三层 · 工程层：选型 + 避坑](#第三层--工程层选型--避坑)
+  - [3.1 选型决策树（5 个问题决定 runtime 选哪个）](#31-选型决策树5-个问题决定-runtime-选哪个)
+  - [3.2 避坑清单（≥10 条，每条结论 + 证据）](#32-避坑清单10-条每条结论--证据)
+  - [3.3 多智能体：什么时候值得拆](#33-多智能体什么时候值得拆)
+  - [📋 面试卡片：工程层](#-面试卡片工程层)
+- [5 分钟速查卡（末尾专用）](#5-分钟速查卡末尾专用)
+- [面试问答卡（精选 6 问，与选型卡互补不重复）](#面试问答卡精选-6-问与选型卡互补不重复)
+- [附录 A：本文引用的仓库文件（仓库根相对全路径）](#附录-a本文引用的仓库文件仓库根相对全路径)
 - [附录 B：中英对照术语表](#附录-b中英对照术语表)
 
-
-### a) 位置
-- D4 上午「**源码对照**」时间盒（与 D2 记忆、D3 RAG、D5 收尾串联）。
-- 对应六层栈的 **L4 Runtime（运行时/编排层）**。
-- 衔接已有的 `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（312 行；解决"同层二选一、Hermes 是什么、语言门槛、D4 入门路径"）——**本文不复述，只在它下面挖一层**。
-
-### b) 被蒸馏的源（路径 + 行数 + 主旨）
-
-| 模块 | 主路径 | 行数 | 本文中用作什么 |
-|------|--------|------|---------------|
-| 选型卡 | `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` | 312 | 衔接卡；本文不复述其已写结论 |
-| LangGraph | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\{graph,llm,rag,threads}.py` + `frontend\hitl.py` | 80/106/92/10/183 | **最小可跑成品**：StateGraph + SqliteSaver + HITL；DeepSeek ChatOpenAI + BGE；`@tool` RAG；thread_id（线程标识） 反查；`Command(resume)` |
-| 多 Agent | `11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\backend\{graph.py, state.py, runner.py}` | 27/13/126 | 顺序 handoff：flight→hotel→itinerary→final |
-| Hermes 鸟瞰 | `08-hermes-agent\01-arch.md`（§1-§3.3） | 657 | Session 冻结 vs Turn（轮次） 组装 |
-| Hermes 循环 | `08-hermes-agent\02-run-agent\{README.md, notes\1_agent_loop.md, notes\2_tools_discovery.md, notes\4_run_conversation_callflow.md, hermes_src\agent\conversation_loop.py}` | 248/120/84/367/5355 | call flow + while 骨架 + 三道刹车 + 截胡 + 真源码 prologue/while |
-| Hermes forwarder | `08-hermes-agent\hermes-study\run_agent.py` | 6055（仅头注） | `AIAgent.run_conversation` 是 forwarder（行 24-72） |
-| waku | `12-hermes-agent-small\waku\{loop\agent.py, loop\models.py, runtime\session.py, app.py, db.py, tools\registry.py}` | 113/315/128/103/107/49 | **95 行 while** + 8 provider 桥 + Session 组装 + 装配图 + SQLite+FTS5 + 三件套 registry |
-| waku 入门 | `12-hermes-agent-small\{README.md, docs\architecture.md, learn_guide.md}` | 267/102/608 | 快速开始 + 白板图 + Harness（外壳工程）/Loop/Memory/Eval 入门 |
-| Pi | `13-pi-agent\{00-learn-guide.md, 02-agent-loop.md, 03-events.md, 06-HITL.md}` | 345/598/300/182 | 会话是树 + Prompt 是栈；**三层调用栈** + 双层 while + 事件总线 + HITL 队列 |
-| DSH | `14-deepseek-harness\01.arch.md` | 296 | 5 件 harness + **code vs config** 分水岭 + tool vs skill（技能） |
-| Multiagent | `04-multiagent\01-single_vs_multi.py` 等 6 个文件 | — | 单 vs 多 / 阶段状态机 / LangGraph 风格 / 任务路由 / 冲突解决 |
-
-### c) 蒸馏理由与方法（**约 130 字**）
-
-选型卡已答"二选一"，本文**往下挖一层**——把"Runtime = 主循环"这件事在 5 个真实工程里**逐行核对**：①**对照表**给出每个 runtime 的"loop（主循环） 文件 / 行数 / 状态/HITL/扩展点/可跑性"；②**同循环五种写法**用统一骨架展示五个工程各自的 3–5 行真实伪代码；③**三层递进**：概念（5 件 harness）→ 实现（每个 runtime 关键机制）→ 工程（决策树 + ≥10 条避坑）。所有路径必须**仓库根相对 + 全路径**，所有断言必须**有源文件证据**。
 
 ---
 
@@ -78,57 +56,60 @@
 | 面试表现 | 被追问"两者关系"就卡住 | 能主动讲"互斥替代，避免 harness（外壳工程） 重复建设" |
 | 工程风险 | 状态/人审/持久化各写一套，长期维护地狱 | 状态与人审只有一处真相 |
 
-### 0.3 失败模式 ASCII 图
+### 0.3 失败模式图
 
-```text
-选 runtime 的四种典型翻车
-  │
-  ├── ❌ 翻车 1：叠两套循环（LangGraph 图里再写 while）
-  │       症状：messages 双写、checkpoint 与自研状态不一致、成本翻倍
-  │       正解：骨架二选一；缺失能力用 tool / middleware 补
-  │
-  ├── ❌ 翻车 2：把 checkpoint 当"长期记忆"
-  │       症状：换 thread_id 就"失忆"；用户偏好永远记不住
-  │       正解：checkpoint = 会话恢复；长期记忆另立一层（见 L2）
-  │
-  ├── ❌ 翻车 3：没有停机条件
-  │       症状：while True 烧钱到 API 限流；无人值守跑一夜
-  │       正解：三重刹车（max_iterations / budget / grace call）+ 中断信号
-  │
-  └── ❌ 翻车 4：一上来硬啃 16k 行源码
-          症状：读了 2 小时没跑通，信心崩掉
-          正解：按本文 §2.0 的双模式阅读——先 95 行的 waku，再 Hermes 主循环段
+```mermaid
+flowchart TD
+  ROOT["选 runtime 的四种典型翻车"]
+  ROOT --> F1["❌ 翻车 1：叠两套循环（LangGraph 图里再写 while）<br/>症状：messages 双写、checkpoint 与自研状态不一致、成本翻倍<br/>正解：骨架二选一；缺失能力用 tool / middleware 补"]
+  ROOT --> F2["❌ 翻车 2：把 checkpoint 当#quot;长期记忆#quot;<br/>症状：换 thread_id 就#quot;失忆#quot;；用户偏好永远记不住<br/>正解：checkpoint = 会话恢复；长期记忆另立一层（见 L2）"]
+  ROOT --> F3["❌ 翻车 3：没有停机条件<br/>症状：while True 烧钱到 API 限流；无人值守跑一夜<br/>正解：三重刹车（max_iterations / budget / grace call）+ 中断信号"]
+  ROOT --> F4["❌ 翻车 4：一上来硬啃 16k 行源码<br/>症状：读了 2 小时没跑通，信心崩掉<br/>正解：按本文 §2.0 的双模式阅读——先 95 行的 waku，再 Hermes 主循环段"]
 ```
 
 ---
 
-## 一、概念层：Runtime 是什么
+## 📍 本页定位与蒸馏溯源
 
-### 1.0 统一类比：runtime = 城市交通调度中心
+### a) 位置
+- D4 上午「**源码对照**」时间盒（与 D2 记忆、D3 RAG、D5 收尾串联）。
+- 对应六层的 **L4 Runtime（运行时/编排层）**。
+- 衔接已有的 `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（524 行；解决"同层二选一、Hermes 是什么、语言门槛、D4 入门路径"）——**本文不复述，只在它下面挖一层**。
 
-**贯穿全文的类比**：一个 runtime（运行时） 就是一座城市的**交通调度中心**。
+### b) 被蒸馏的源（路径 + 行数 + 主旨）
 
-| 类比物 | 对应概念 | 本文后续对应章节 |
-|---|---|---|
-| **路网 + 信号灯** | 主循环与停止条件（什么时候走、什么时候停） | §1.4 六步骨架、§3.1–§3.5 五种写法 |
-| **停车场** | 状态/会话持久化（车停哪儿、回来还能找到） | §2.1 对照表"状态/会话怎么存" |
-| **交通工具** | 工具与协议（能开什么车、走哪条路） | §2.1"工具注册怎么做" |
-| **人工交警** | HITL（人在环） / 审批（关键时刻必须有人点头） | §2.1"HITL 做法"、§5.4 |
-| **调度规章** | 配置与扩展点（谁能改规则、怎么热更新） | §2.1"扩展点在哪" |
+| 模块 | 主路径 | 行数 | 本文中用作什么 |
+|------|--------|------|---------------|
+| 选型卡 | `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` | 524 | 衔接卡；本文不复述其已写结论 |
+| LangGraph | `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\{graph,llm,rag,threads}.py` + `frontend\hitl.py` | 80/106/92/10/183 | **最小可跑成品**：StateGraph + SqliteSaver + HITL；DeepSeek ChatOpenAI + BGE；`@tool` RAG；thread_id（线程标识） 反查；`Command(resume)` |
+| 多 Agent | `11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\backend\{graph.py, state.py, runner.py}` | 27/13/126 | 顺序 handoff：flight→hotel→itinerary→final |
+| Hermes 鸟瞰 | `08-hermes-agent\01-arch.md`（§1-§3.3） | 657 | Session 冻结 vs Turn（轮次） 组装 |
+| Hermes 循环 | `08-hermes-agent\02-run-agent\{README.md, notes\1_agent_loop.md, notes\2_tools_discovery.md, notes\4_run_conversation_callflow.md, hermes_src\agent\conversation_loop.py}` | 248/120/84/367/5355 | call flow + while 骨架 + 三道刹车 + 截胡 + 真源码 prologue/while |
+| Hermes forwarder | `08-hermes-agent\hermes-study\run_agent.py` | 6055（仅头注） | `AIAgent.run_conversation` 是 forwarder（行 24-72） |
+| waku | `12-hermes-agent-small\waku\{loop\agent.py, loop\models.py, runtime\session.py, app.py, db.py, tools\registry.py}` | 113/315/128/103/107/49 | **95 行 while** + 8 provider 桥 + Session 组装 + 装配图 + SQLite+FTS5 + 三件套 registry |
+| waku 入门 | `12-hermes-agent-small\{README.md, docs\architecture.md, learn_guide.md}` | 267/102/608 | 快速开始 + 白板图 + Harness（外壳工程）/Loop/Memory/Eval 入门 |
+| Pi | `13-pi-agent\{00-learn-guide.md, 02-agent-loop.md, 03-events.md, 06-HITL.md}` | 345/598/300/182 | 会话是树 + Prompt 是叠加层；**三层调用结构** + 双层 while + 事件总线 + HITL 队列 |
+| DSH | `14-deepseek-harness\01.arch.md` | 296 | 5 件 harness + **code vs config** 分水岭 + tool vs skill（技能） |
+| Multiagent | `04-multiagent\01-single_vs_multi.py` 等 6 个文件 | — | 单 vs 多 / 阶段状态机 / LangGraph 风格 / 任务路由 / 冲突解决 |
 
-**判定一个 runtime 好不好，就看这五件是否齐备且彼此不打架**——这也正是 §1.2 的"五个必备件"。
-后文每张对照表都会回到这个类比：**路网是循环、停车场是状态、车是工具、交警是人审、规章是配置**。
+### c) 蒸馏理由与方法（**约 130 字**）
 
-### 1.1 Runtime 在六层栈里的位置
+选型卡已答"二选一"，本文**往下挖一层**——把"Runtime = 主循环"这件事在 5 个真实工程里**逐行核对**：①**对照表**给出每个 runtime 的"loop（主循环） 文件 / 行数 / 状态/HITL/扩展点/可跑性"；②**同循环五种写法**用统一骨架展示五个工程各自的 3–5 行真实伪代码；③**三层递进**：概念（5 件 harness）→ 实现（每个 runtime 关键机制）→ 工程（决策树 + ≥10 条避坑）。所有路径必须**仓库根相对 + 全路径**，所有断言必须**有源文件证据**。
 
-按本仓库既有的六层栈（**L1 模型 · L2 工具/接口 · L3 RAG/检索 · L4 运行时 · L5 评测/观测 · L6 部署/运维**），L4 Runtime 解决的是同一类问题：**消息进来 → 拼上下文 → 调模型 → 看是否调工具 → 执行 → 回灌 → 终止**。
+---
+
+## 第一层 · 概念层：Runtime 是什么
+
+### 1.1 Runtime 在六层里的位置
+
+按本仓库既有的六层划分（**L1 模型 · L2 工具/接口 · L3 RAG/检索 · L4 运行时 · L5 评测/观测 · L6 部署/运维**），L4 Runtime 解决的是同一类问题：**消息进来 → 拼上下文 → 调模型 → 看是否调工具 → 执行 → 回灌 → 终止**。
 
 > 仓库中两条独立表述给出完全一致的拆分（DSH 与 Pi 的图都是**模块分层**，不是层间依赖）：
 >
 > - `14-deepseek-harness\01.arch.md:103-128` 把 Harness 拆为 `Loop / 模型适配器 / 工具注册表 / Prompt 组装 / Session 日志` 五块；
 > - `13-pi-agent\01-arch.md:5-42` 把 Pi 拆为 `Agent Core（loop）+ Interactive（CLI/TUI/扩展）` 两块。
 >
-> 详见 `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` §1.2（312 行）。
+> 详见 `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md` §1.2（524 行）。
 
 ### 1.2 一个完整 Harness 的**五个必备件**
 
@@ -144,7 +125,22 @@
 
 > **关键判断**：①③④ framework 已有；②⑤ 大半 framework 有，但细节（什么时候冻结 SP、interrupt 是阻塞还是入队）每个项目不同。
 
-### 1.3 为什么"编排库"与"成品 harness"容易被叠成两层
+### 1.3 统一类比：runtime = 城市交通调度中心
+
+**贯穿全文的类比**：一个 runtime（运行时） 就是一座城市的**交通调度中心**。
+
+| 类比物 | 对应概念 | 本文后续对应章节 |
+|---|---|---|
+| **路网 + 信号灯** | 主循环与停止条件（什么时候走、什么时候停） | §1.5 六步骨架、§2.3.1–§2.3.5 五种写法 |
+| **停车场** | 状态/会话持久化（车停哪儿、回来还能找到） | §2.1 对照表"状态/会话怎么存" |
+| **交通工具** | 工具与协议（能开什么车、走哪条路） | §2.1"工具注册怎么做" |
+| **人工交警** | HITL（人在环） / 审批（关键时刻必须有人点头） | §2.1"HITL 做法"、§3.3.4 |
+| **调度规章** | 配置与扩展点（谁能改规则、怎么热更新） | §2.1"扩展点在哪" |
+
+**判定一个 runtime 好不好，就看这五件是否齐备且彼此不打架**——这也正是 §1.2 的"五个必备件"。
+后文每张对照表都会回到这个类比：**路网是循环、停车场是状态、车是工具、交警是人审、规章是配置**。
+
+### 1.4 为什么"编排库"与"成品 harness"容易被叠成两层
 
 读 `14-deepseek-harness\01.arch.md:103-128` 时容易把 Harness 当成"图编排的上一层"——**错位**。所有 5 个 runtime 都在 L4 这一层互相依赖；只是命名习惯让它们看着像上下层。证据：
 
@@ -152,9 +148,9 @@
 - Hermes / waku / DSH 是 **while 循环 + 状态机**。
 - Pi 是 **双层 while**（内层消化 tool+steering，外层消化 follow-up），见 `13-pi-agent\02-agent-loop.md:265-297`。
 
-→ 都是同一控制流的两种实现。详见下文 **§3 同循环五种写法**。
+→ 都是同一控制流的两种实现。详见下文 **§2.3 同一个循环，五种写法**。
 
-### 1.4 一个最小可跑循环的 6 步骨架（**全文统一口径**）
+### 1.5 一个最小可跑循环的 6 步骨架（**全文统一口径**）
 
 无论哪个 runtime，"组装上下文 → 调 LLM → 解析 tool_call → 执行 → 回填 → 停止判定"都是骨架：
 
@@ -174,28 +170,22 @@ function flow（最小循环骨架）
 
 五个 runtime 在 6 步上的**主要差异**：①组装 LangGraph 声明式累加（`TypedDict + add_messages`）vs 其余命令式 `append` vs DSH 每步重新组装；②调 LangGraph 节点式 vs while/for 内；③解析 LangGraph `tools_condition` vs Hermes/waku/Pi/DSH 看 `tool_calls`/`tool_use` 列表；④执行 LangGraph `ToolNode` vs Hermes 截胡+registry vs waku `tools.execute` vs Pi `executeToolCalls` vs DSH `registry.dispatch`；⑥停止 LangGraph 触顶+interrupt vs Hermes max_iter+budget+grace+verify vs waku iteration+兜底文本 vs Pi 四道门+双队列 vs DSH 仅"模型不再要工具"。
 
-### 1.5 因果链：选型判断的依赖顺序（谁是谁的前提）
+### 1.6 因果链：选型判断的依赖顺序（谁是谁的前提）
 
-```
-业务形态：终端里干活的编码 Agent？ vs 业务流程里的可恢复工作流？
-   │  ① 决定"要不要可恢复/可打断"
-   ▼
-是否需要 持久化 + 可恢复 + 人审（HITL）
-   │  ② 决定"骨架选谁"
-   ├─ 要 → LangGraph 主场（checkpointer / interrupt / time travel 现成）
-   └─ 不要 → Hermes 这类成品 harness 更省事（循环/工具/记忆/网关全预装）
-            │  ③ 决定"状态放哪"
-            ▼
-        状态放哪：SQLite transcript？checkpointer？Markdown 三件套？
-            │  ④ 决定"人审怎么接"
-            ▼
-        人审怎么接：图内 interrupt？审批队列 + 工具白名单？
+```mermaid
+flowchart TD
+  A["业务形态：终端里干活的编码 Agent？ vs 业务流程里的可恢复工作流？"]
+  A -->|"① 决定#quot;要不要可恢复/可打断#quot;"| B["是否需要 持久化 + 可恢复 + 人审（HITL）"]
+  B -->|"② 决定#quot;骨架选谁#quot;"| C["要 → LangGraph 主场（checkpointer / interrupt / time travel 现成）"]
+  B -->|"② 决定#quot;骨架选谁#quot;"| D["不要 → Hermes 这类成品 harness 更省事（循环/工具/记忆/网关全预装）"]
+  D -->|"③ 决定#quot;状态放哪#quot;"| E["状态放哪：SQLite transcript？checkpointer？Markdown 三件套？"]
+  E -->|"④ 决定#quot;人审怎么接#quot;"| F["人审怎么接：图内 interrupt？审批队列 + 工具白名单？"]
 ```
 
 **依赖关系要点**：第 ② 步之前不要谈框架品牌；第 ③④ 步的选择被第 ①② 步锁死。
 面试被问"你为什么选 X"，按这条链答（形态 → 可恢复性 → 状态 → 人审），比直接说"我们用 X"稳得多。
 
-### 1.6 📋 面试卡片（概念层）
+### 📋 面试卡片：概念层
 
 - **Q1：runtime / 编排层 / harness 三个词的关系？**
   > 都在 L4。Runtime 是层名；编排层是这层做的事；harness 是这层装出来的东西。LangGraph 是"你写 harness 的库"；Hermes / waku / pi / DSH 是"已经装好的 harness"。
@@ -208,7 +198,7 @@ function flow（最小循环骨架）
 
 ---
 
-## 二、实现层：五方 Runtime 横向对照
+## 第二层 · 实现层：五方 Runtime 横向对照
 
 ### 2.0 本章导引：符号表 · 双模式阅读 · 学习路径
 
@@ -216,22 +206,30 @@ function flow（最小循环骨架）
 
 | 符号/术语 | 含义 | 本文出现处 |
 |---|---|---|
-| **runtime** | 拥有"循环 + 状态 + 工具 + 停机 + 人审"的能力层 | §1.1 六层栈定位 |
+| **runtime** | 拥有"循环 + 状态 + 工具 + 停机 + 人审"的能力层 | §1.1 六层定位 |
 | **harness** | 装这些件的盒子（系统提示词、注册表、权限、沙箱、日志） | §1.2 |
-| **loop / 内循环** | 一次 turn（轮次） 内"调模型 → 是否要工具 → 执行 → 回灌"的反复 | §1.4、§3.x |
+| **loop / 内循环** | 一次 turn（轮次） 内"调模型 → 是否要工具 → 执行 → 回灌"的反复 | §1.5、§2.3.x |
 | **turn / session** | turn = 一问一答；session = 跨 turn 长生命周期（SP 冻结于此） | §2.1 |
-| **checkpointer / thread_id** | 状态持久化与线程标识（= 类比里的"停车场车位号"） | §3.1 |
-| **interrupt / HITL** | 图内中断 + 人审放行（= "人工交警"） | §2.1、§5.4 |
-| **iteration budget / grace call** | 迭代预算；超预算后允许的最后一次调用 | §3.2 |
-| **handoff** | 子 Agent 移交控制权（= 换司机/换车队） | §5.3 |
+| **checkpointer / thread_id** | 状态持久化与线程标识（= 类比里的"停车场车位号"） | §2.3.1 |
+| **interrupt / HITL** | 图内中断 + 人审放行（= "人工交警"） | §2.1、§3.3.4 |
+| **iteration budget / grace call** | 迭代预算；超预算后允许的最后一次调用 | §2.3.2 |
+| **handoff** | 子 Agent 移交控制权（= 换司机/换车队） | §3.3.3 |
 | **toolset / registry** | 工具集合与注册表；循环只消费 schema | §2.1 |
 | **transcript** | 落库的对话记录（Hermes 用 SQLite + FTS5） | §2.1 |
 
+#### 入口表（这一章按三拍读）
+
+| 拍 | 含义 | 读哪几节 | 关键证据 |
+|---|---|---|---|
+| **认** | 先确认这一层在六层里的位置，以及一个能跑的循环至少要有哪几件 | 1.1 / 1.2 | Harness 五件：循环 / 状态 / 工具 / 停机 / 人审。来源 `14-deepseek-harness\01.arch.md:103-128`（DSH 拆五块）与 `13-pi-agent\01-arch.md:5-42`（Pi 拆两块） |
+| **比** | 五个 runtime 的循环各写在哪、长什么样，逐行对照 | 2.1 / 2.2 / 2.3 | LangGraph `11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:21-80`；Hermes `08-hermes-agent\02-run-agent\hermes_src\agent\conversation_loop.py:643-668`；waku `12-hermes-agent-small\waku\loop\agent.py:62-112`；Pi `13-pi-agent\02-agent-loop.md:265-297`；DSH `14-deepseek-harness\01.arch.md:21-56` |
+| **选** | 用决策树挑骨架，再按避坑清单核对一遍 | 3.1 / 3.2 | 决策树五问；避坑清单 ≥10 条，每条结论加证据 |
+
 #### 双模式阅读
 
-- **快速模式（面试前 3 天，25 分钟）**：只读 §1.2 五个必备件 → §2.1 五方对照表 → §4.1 选型决策树 → §4.2 避坑清单 → §6 五分钟速查卡 → §8 面试问答卡。
+- **快速模式（面试前 3 天，25 分钟）**：只读 §1.2 五个必备件 → §2.1 五方对照表 → §3.1 选型决策树 → §3.2 避坑清单 → 5 分钟速查卡 → 面试问答卡。
   目标：能对任一 runtime 说出"循环在哪、状态存哪、人审怎么做"。
-- **深入模式（要源头对比，3–5 小时）**：按 §3.1→§3.5 顺序读"同一个循环的五个写法"（每个都给真源码行号），再回头读 §2.2 各自关键机制。
+- **深入模式（要源头对比，3–5 小时）**：按 §2.3.1→§2.3.5 顺序读"同一个循环的五个写法"（每个都给真源码行号），再回头读 §2.2 各自关键机制。
   目标：能指着文件说"这一行的作用"，并解释为什么五种写法本质是同一控制流。
 
 #### 学习路径
@@ -239,13 +237,14 @@ function flow（最小循环骨架）
 ```mermaid
 graph TD
   A["§1 概念层：Runtime 是什么 + 五个必备件"] --> B["§2.1 五方对照表（全局地图）"]
-  B --> C["§3 同一个循环，五种写法（真源码行号）"]
-  C --> D["§4.1 决策树 + §4.2 避坑"]
-  D --> E["§5 多智能体：什么时候值得拆"]
-  E --> F["§6 速查卡 · §7 术语表 · §8 面试问答卡"]
+  B --> C["§2.3 同一个循环，五种写法（真源码行号）"]
+  C --> D["§3.1 决策树 + §3.2 避坑"]
+  D --> E["§3.3 多智能体：什么时候值得拆"]
+  E --> F["5 分钟速查卡 · 附录 B 术语表 · 面试问答卡"]
   C -.->|"先读 95 行的 waku"| C1["12-hermes-agent-small\waku\loop\agent.py"]
   C1 -.->|"再看主循环段"| C2["08-hermes-agent\02-run-agent\hermes_src\agent\conversation_loop.py"]
 ```
+
 ### 2.1 五方 Runtime 对照表
 
 > 列含义（与本节正文一一对应）：`loop 在哪个文件` 给**全路径 + 行号**；其余列精确到关键文件。
@@ -257,7 +256,7 @@ graph TD
 | **状态/会话怎么存** | `SqliteSaver` + `thread_id`：`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:70-71` 建连接 → `chatbot.compile(checkpointer=checkpoint)`；`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py:7-9` 用 `checkpoint.list(None)` 反查所有 thread_id（线程标识） | SQLite transcript（对话记录）：每 Turn 落库（`SessionDB`），SP **Session 启动时冻结**（`08-hermes-agent\01-arch.md:181-201`） | 单文件 SQLite + FTS5：`12-hermes-agent-small\waku\db.py:12-76` 建 `state.db`（含 `facts_fts` / `episodes_fts` / `chat_log`），自动迁移（`:79-95`） | **会话是树**：JSONL + `parentId`（`13-pi-agent\00-learn-guide.md:9-65`），`/tree` 同文件切枝、`/fork`/`/clone` 新文件 | 配置 + 配置驱动的"每轮重新组装"（`14-deepseek-harness\01.arch.md:182-217`），持久化在文档中**未给出**实现级路径（推断：靠自身 store） |
 | **工具注册怎么做** | LangChain `@tool` 装饰器：`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\rag.py:53-92` 的 `rag_tool`；图用 `ToolNode(tools)`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:68`） | `08-hermes-agent\02-run-agent\hermes_src\tools\*.py` import 时 `registry.register(...)` → `discover_builtin_tools` → `toolsets._HERMES_CORE_TOOLS`；循环只消费 schema（`08-hermes-agent\02-run-agent\notes\2_tools_discovery.md:18-67`） | `ToolRegistry.register(Tool)` + `execute(name, args)`（`12-hermes-agent-small\waku\tools\registry.py:30-49`）；失败转文本不抛（`:46-48`） | `executeToolCalls`：`prepare→execute→finalize`；并行/串行由 `executionMode` 控制（`13-pi-agent\02-agent-loop.md:380-407`） | **Tool ≠ Skill（技能）**（`14-deepseek-harness\01.arch.md:229-270`）：Tool=函数、确定性返回；Skill=Agent 自己执行流程，烧 token |
 | **人审（HITL）怎么做** | `interrupt` + `Command(resume=…)`：在节点里抛 `Interrupt`，恢复用 `Command`；Streamlit 侧用 `chatbot.get_state(config)` 拿 `state_snapshot.interrupts`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\frontend\hitl.py:11-45, 89-183`） | 多种入口：`/stop` interrupt、todo 截胡、approval/clarify gateway 命令、`08-hermes-agent\09-lang-serial-not\README.md` §7 | **waku 没有专用审批**：靠 streamlit/`frontend` 层自己接，**Core 本身不弹窗**（推断：见 Pi 同款设计哲学） | **Core 无审批弹窗**：① 队列纠偏 `steer()` / `followUp()`；② 扩展 `beforeToolCall` 拦截；③ UI `await ui.select`（`13-pi-agent\06-HITL.md:15-90`） | 文档未明确（推断）：code 路径可以"自我修改"——Human 退到旁路靠 Eval + Release Gate（`14-deepseek-harness\01.arch.md:140-178`） |
-| **记忆怎么管** | `messages: Annotated[list, add_messages]` 累加；`store`/`checkpointer` 可选；`threads.py` 侧边栏 = `checkpoint.list(None)`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py:1-10`） | 三层：① SOUL/user.md/memory.md **Session 启动冻结**（`08-hermes-agent\01-arch.md:175-201`）；② SQLite transcript；③ 可选 External（mem0/Honcho/SuperMemory） | 三支柱+两道工序：semantic/episodic/procedural + **retrieval_gate**（先问要不要）+ **consolidation**（每 N 轮蒸馏，`12-hermes-agent-small\waku\runtime\session.py:64-89`） | **Prompt 是栈**：default → `APPEND_SYSTEM.md` → `AGENTS.md`/`CLAUDE.md` → skills → cwd（`13-pi-agent\00-learn-guide.md:67-118`） | 配置驱动；Agent 可改自身配置再热重载（`14-deepseek-harness\01.arch.md:144-217`）；具体"记忆三轨"未在文档中给出（推断） |
+| **记忆怎么管** | `messages: Annotated[list, add_messages]` 累加；`store`/`checkpointer` 可选；`threads.py` 侧边栏 = `checkpoint.list(None)`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\threads.py:1-10`） | 三层：① SOUL/user.md/memory.md **Session 启动冻结**（`08-hermes-agent\01-arch.md:175-201`）；② SQLite transcript；③ 可选 External（mem0/Honcho/SuperMemory） | 三支柱+两道工序：semantic/episodic/procedural + **retrieval_gate**（先问要不要）+ **consolidation**（每 N 轮蒸馏，`12-hermes-agent-small\waku\runtime\session.py:64-89`） | **Prompt 是叠加层**：default → `APPEND_SYSTEM.md` → `AGENTS.md`/`CLAUDE.md` → skills → cwd（`13-pi-agent\00-learn-guide.md:67-118`） | 配置驱动；Agent 可改自身配置再热重载（`14-deepseek-harness\01.arch.md:144-217`）；具体"记忆三轨"未在文档中给出（推断） |
 | **扩展点在哪** | 子图（subgraph）+ `interrupt` + LangSmith | Plugin（`~/.hermes/plugins/`）+ MemoryProvider ABC + skill + MCP | MCP 桥（`12-hermes-agent-small\waku\tools\mcp_client.py` 路径，`12-hermes-agent-small\README.md` §"Loop · Tools"）+ extras（`[voice]`/`[telegram]`/`[mcp]`） | **Extensions** 六类钩子：tools/commands/events/UI/providers/state（`13-pi-agent\00-learn-guide.md:172-201`） | "每一块都是插件，包括 Loop"（`14-deepseek-harness\01.arch.md:138-142`） |
 | **能跑吗（本机可跑性诚实评估）** | ⚠ **可跑**（`11-langgraph\02-Agentic-Chatbot-using-LangGraph`）：需 `DEEPSEEK_API_KEY` + `TAVILY_API_KEY`；`pip install -r requirements.txt && streamlit run app.py` | ⚠ **可跑**（`08-hermes-agent\02-run-agent\demo\run_agent_loop.py`）：需 DeepSeek key；README `python run_agent_loop.py`（具体命令已记在选型卡 §7） | ⚠ **可跑**：需 `WAKU_PROVIDER + 对应 key`；`uv venv && uv pip install -e .`（`12-hermes-agent-small\README.md:33-53`） | 📖 **本仓库只读**：核心源码不在仓（`13-pi-agent\00-learn-guide.md:3` 指向 `D:\workspace\doc\面试狂魔\…\pi`，**本机不在**）；跑法未验证 | 📖 **本仓库只读**：仅 `14-deepseek-harness\01.arch.md` 296 行，无可跑代码 |
 
@@ -347,7 +346,7 @@ def run_loop(client, model, system, messages, tools,
 
 **核心机制**：①**一个 for = 两道 guardrail**（`agent.py:95-112`）；②**`messages.append` 原地 mutate**（`:51-57` 注释 + `:90, :109`，调用后即完整 working memory 便于 trace）；③**Observer 模式**（`llm`/`tool`/`text`/`gate` 四类事件 `notify`，`:30, :58, :86, :105`）；④**Provider 桥**（loop 只说 Anthropic Messages；OpenAI/Kimi/GLM/Gemini/DeepSeek/Minimax/OpenRouter 通过 `OpenAICompatClient` 约 60 行转译，`loop\models.py:142-256`）；⑤**Retrieval gate + consolidation**（`runtime\session.py:78-88`：`gated_retrieve` cheap model 先判"要不要"，`maybe_consolidate` 每 N 轮异步蒸馏；`docs\architecture.md:87-95` 列为"**Design decisions worth stealing**"）；⑥**SOUL.md 是程序性记忆**（`runtime\session.py:45-51`："procedural memory at its simplest"——改 SOUL.md = 改人格）。
 
-#### 2.2.4 Pi：双层 while + 事件总线 + 三层调用栈
+#### 2.2.4 Pi：双层 while + 事件总线 + 三层调用结构
 
 **双层 while（Core）**——`13-pi-agent\02-agent-loop.md:265-297`：
 
@@ -369,7 +368,7 @@ runLoop(context, newMessages, config):
     break                                                  # ⑥ 停门 4：模型决定停
 ```
 
-**核心机制**：①**三层调用栈**（`02-agent-loop.md:24-96`）`runLoop` 无状态 + `Agent` 有状态（transcript/queue/abort（中断信号））+ `AgentSession` 产品层；②**Core 停机四道门**（`:488-535`）①error/aborted 立刻退 ②整批 terminate 不续 LLM ③`shouldStopAfterTurn()` 跳队列 ④队列空+无 tool 正常 `agent_end`；③**Interactive 兜底**（`:539-571`）`_handlePostAgentRun` retry/compact/queued；④**HITL = 队列 + 拦截**（`06-HITL.md:1-100`）Core 不弹窗，靠 steering/follow-up + `beforeToolCall` + `await ui.select`；⑤**Prompt 是栈**（`00-learn-guide.md:67-118`）default → `APPEND_SYSTEM.md` → `AGENTS.md`/`CLAUDE.md` → skills → cwd；⑥**会话是树**（`:9-65`）JSONL + `parentId`，`/tree` 同文件切枝、`/fork`/`/clone` 新文件；⑦**事件总线**（`03-events.md:1-85`）Core 发 `AgentEvent`，JSONL 在 `message_end` 追加。
+**核心机制**：①**三层调用结构**（`02-agent-loop.md:24-96`）`runLoop` 无状态 + `Agent` 有状态（transcript/queue/abort（中断信号））+ `AgentSession` 产品层；②**Core 停机四道门**（`:488-535`）①error/aborted 立刻退 ②整批 terminate 不续 LLM ③`shouldStopAfterTurn()` 跳队列 ④队列空+无 tool 正常 `agent_end`；③**Interactive 兜底**（`:539-571`）`_handlePostAgentRun` retry/compact/queued；④**HITL = 队列 + 拦截**（`06-HITL.md:1-100`）Core 不弹窗，靠 steering/follow-up + `beforeToolCall` + `await ui.select`；⑤**Prompt 是叠加层**（`00-learn-guide.md:67-118`）default → `APPEND_SYSTEM.md` → `AGENTS.md`/`CLAUDE.md` → skills → cwd；⑥**会话是树**（`:9-65`）JSONL + `parentId`，`/tree` 同文件切枝、`/fork`/`/clone` 新文件；⑦**事件总线**（`03-events.md:1-85`）Core 发 `AgentEvent`，JSONL 在 `message_end` 追加。
 
 #### 2.2.5 DSH：code vs config + Tool vs Skill + 全件可换
 
@@ -387,26 +386,11 @@ flowchart LR
 
 **核心机制**：①**5 件 harness**（`01.arch.md:103-128`）`Loop / 模型适配器 / 工具注册表 / Prompt 组装 / Session 日志`——和 §1.2 的 5 件对齐；②**code vs config 分水岭**（`:144-217`）进程启动时构建 vs 每步重新组装，配置 = 零件清单，Agent 可改自己配置 → 热重载；③**Tool ≠ Skill**（`:229-270`）Tool=确定性函数（计算机跑代码），Skill=Agent 自己执行流程（烧 token），天气查询做例证；④**全件可换**（`:138-142`）"每一块都是插件——包括 Loop"；⑤**本仓库只有文档**（推断：仅 `01.arch.md` 296 行，无源码）。
 
-### 2.3 📋 面试卡片（实现层）
-
-- **Q4：LangGraph 的"内循环"在源码里是哪一段？**
-  > `add_conditional_edges("chat_node", tools_condition)` + `add_edge("tools","chat_node")`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:77-78`）。`tools_condition` 判 `last_message.tool_calls` 是否为空。
-- **Q5：Hermes 的"三道刹车"是哪三道？**
-  > `max_iterations`（硬上限）/ `IterationBudget`（可 consume）/ `_budget_grace_call`（预算用尽再给 1 次收尾）；外加 `_interrupt_requested` 用户级 stop。源码 `08-hermes-agent\02-run-agent\notes\1_agent_loop.md:69-77`，while 行 `:643-668`。
-- **Q6：waku 的 `run_loop` 为什么"messages 是原地 mutate"？**
-  > 注释明示 `messages is mutated in place — after the call it contains the full working memory of the turn (assistant thoughts, tool calls, tool results), which is exactly what gets traced`（`12-hermes-agent-small\waku\loop\agent.py:51-57`）。
-- **Q7：Pi 的"双层 while"分别消化什么？**
-  > 内层消化 tool + steering（中途纠偏，当前工具不跳过）；外层消化 follow-up（做完再加一句）。`13-pi-agent\02-agent-loop.md:265-297`。
-- **Q8：DSH 的"code vs config"分水岭是什么？**
-  > 进程启动时构建 vs 每步重新组装。Agent 改自身配置 → 热重载，不用构建/发布。`14-deepseek-harness\01.arch.md:144-217`。
-
----
-
-## 三、同一个循环，五种写法（本节是本文最重要的资产）
+### 2.3 同一个循环，五种写法（本节是本文最重要的资产）
 
 > **骨架（六步）**：①组装上下文（SP + history + user）→ ②调 LLM（streaming 或一次性）→ ③解析 tool_call → ④执行 → ⑤回填 → ⑥停止（无 tool / 触顶 / interrupt / verify）。所有伪代码行号、关键符号、出处文件都列在每块代码块注释里，便于面试时背诵。
 
-### 3.1 LangGraph ——图节点式循环
+### 2.3.1 LangGraph ——图节点式循环
 
 ```python
 # 出处：11-langgraph/02-Agentic-Chatbot-using-LangGraph/backend/graph.py:21-80
@@ -425,7 +409,7 @@ graph.add_edge("tools", "chat_node")                       # ⑤ 自动回灌
 chatbot = graph.compile(checkpointer=SqliteSaver(conn))     # 持久化 :70-71
 ```
 
-### 3.2 Hermes ——真源码 while（最完整的内循环）
+### 2.3.2 Hermes ——真源码 while（最完整的内循环）
 
 ```python
 # 出处：08-hermes-agent/02-run-agent/hermes_src/agent/conversation_loop.py:643-668
@@ -441,14 +425,14 @@ while (api_call_count < agent.max_iterations and agent.iteration_budget.remainin
         messages=api_messages, tools=tool_schemas)
     if response.tool_calls:                                # ③ 解析
         for tc in response.tool_calls:                     # ④ 执行
-            # ├─ todo/memory → agent 级截胡（run_agent.py 提前拦截）
-            # └─ 其它 → registry.dispatch → 注册时的 handler
+            # todo/memory → agent 级截胡（run_agent.py 提前拦截）
+            # 其它 → registry.dispatch → 注册时的 handler
             result = handle_function_call(tc.name, tc.args, task_id=task_id)
             messages.append(tool_result_message(result))   # ⑤ 回填 role=tool
     else: return final_response                            # ⑥ 正常停
 ```
 
-### 3.3 waku ——95 行最简 Python while（最强教学资产）
+### 2.3.3 waku ——95 行最简 Python while（最强教学资产）
 
 ```python
 # 出处：12-hermes-agent-small/waku/loop/agent.py:62-112
@@ -480,11 +464,11 @@ def run_loop(client, model, system, messages, tools,
 
 **行号速记**：循环 `:62`、guardrail 1 `:94-97`、guardrail 2 `:111-112`、`messages` 原地 mutate（`:51-57` 注释）。
 
-### 3.4 Pi ——双层 while + 事件 + 队列
+### 2.3.4 Pi ——双层 while + 事件 + 队列
 
 ```text
 # 出处：13-pi-agent/02-agent-loop.md:265-297（教程源；真源码 packages/agent/src/agent-loop.ts）
-# 三层调用栈：runLoop(无状态) + Agent(状态: transcript/queue/abort) + AgentSession(产品层)
+# 三层调用结构：runLoop(无状态) + Agent(状态: transcript/queue/abort) + AgentSession(产品层)
 function flow（Pi Core：双层 while）
   runLoop(context, newMessages, config):
     pending = getSteeringMessages()
@@ -505,7 +489,7 @@ function flow（Pi Core：双层 while）
 
 **行号速记**：内层消化 steering `:265-289`、外层消化 follow-up `:290-297`、四道停机门 `:488-535`。
 
-### 3.5 DSH ——配置驱动的 while（仓库内仅文档）
+### 2.3.5 DSH ——配置驱动的 while（仓库内仅文档）
 
 ```text
 # 出处：14-deepseek-harness/01.arch.md:21-56（思维图）+ 103-128（5 件分解）+ 144-217（code vs config）
@@ -528,7 +512,18 @@ function flow（DSH：每步重新组装）
 
 **关键设计差异**：①组装**重新读配置**；工具注册两套（Tool 路径确定、Skill 是 LLM 自己执行）；停机判断只看"模型不再要工具"。
 
-### 3.6 📋 面试卡片 + 共性速记
+### 📋 面试卡片：实现层
+
+- **Q4：LangGraph 的"内循环"在源码里是哪一段？**
+  > `add_conditional_edges("chat_node", tools_condition)` + `add_edge("tools","chat_node")`（`11-langgraph\02-Agentic-Chatbot-using-LangGraph\backend\graph.py:77-78`）。`tools_condition` 判 `last_message.tool_calls` 是否为空。
+- **Q5：Hermes 的"三道刹车"是哪三道？**
+  > `max_iterations`（硬上限）/ `IterationBudget`（可 consume）/ `_budget_grace_call`（预算用尽再给 1 次收尾）；外加 `_interrupt_requested` 用户级 stop。源码 `08-hermes-agent\02-run-agent\notes\1_agent_loop.md:69-77`，while 行 `:643-668`。
+- **Q6：waku 的 `run_loop` 为什么"messages 是原地 mutate"？**
+  > 注释明示 `messages is mutated in place — after the call it contains the full working memory of the turn (assistant thoughts, tool calls, tool results), which is exactly what gets traced`（`12-hermes-agent-small\waku\loop\agent.py:51-57`）。
+- **Q7：Pi 的"双层 while"分别消化什么？**
+  > 内层消化 tool + steering（中途纠偏，当前工具不跳过）；外层消化 follow-up（做完再加一句）。`13-pi-agent\02-agent-loop.md:265-297`。
+- **Q8：DSH 的"code vs config"分水岭是什么？**
+  > 进程启动时构建 vs 每步重新组装。Agent 改自身配置 → 热重载，不用构建/发布。`14-deepseek-harness\01.arch.md:144-217`。
 
 **共性**：每条伪代码都至少含 ② 调 LLM、③ 解析、④ 执行、⑤ 回填、⑥ 停止。
 **差别**：①组装 Graph `TypedDict+add_messages` 声明式 vs 其余 `append` 命令式 vs DSH 每步重新组装；⑥停止 Graph 条件边+触顶 vs Hermes 三道刹车+verify vs waku iteration+兜底文本 vs Pi 四道门+双队列 vs DSH 仅"模型不再要工具"。
@@ -542,23 +537,24 @@ function flow（DSH：每步重新组装）
 
 ---
 
-## 四、工程层：选型 + 避坑
+## 第三层 · 工程层：选型 + 避坑
 
-### 4.1 选型决策树（**5 个问题决定 runtime 选哪个**）
+### 3.1 选型决策树（**5 个问题决定 runtime 选哪个**）
 
-```text
-   ┌─ 业务是否需要"线性多步 + 审批 + 状态机"?
-   │  是 → LangGraph（StateGraph 天然优势）
-   │  否 ↓
-   │  ┌─ 要"成品 agent + 长会话 + 多渠道"? 是 → Hermes / waku（Python）
-   │  │  否 ↓
-   │  │  ┌─ 需要 TUI/扩展/热加载 Skill/session 切枝树? 是 → Pi（TS Core + RPC）
-   │  │  │  否 → DSH（配置驱动）
+```mermaid
+flowchart TD
+  Q1{"业务是否需要#quot;线性多步 + 审批 + 状态机#quot;？"}
+  Q1 -->|"是"| LG["LangGraph（StateGraph 天然优势）"]
+  Q1 -->|"否"| Q2{"要#quot;成品 agent + 长会话 + 多渠道#quot;？"}
+  Q2 -->|"是"| HW["Hermes / waku（Python）"]
+  Q2 -->|"否"| Q3{"需要 TUI/扩展/热加载 Skill/session 切枝树？"}
+  Q3 -->|"是"| PI["Pi（TS Core + RPC）"]
+  Q3 -->|"否"| DSH["DSH（配置驱动）"]
 ```
 
 **5 问**：①业务多步+审批+状态机 → LangGraph；②成品 agent 不愿自写 → Hermes/waku；③TUI + 扩展 + session 树 → Pi；④Agent 改配置 → 热重载 → DSH；⑤只想 Python → LangGraph/Hermes/waku（DSH 仅文档）。
 
-### 4.2 避坑清单（≥10 条，每条结论 + 证据）
+### 3.2 避坑清单（≥10 条，每条结论 + 证据）
 
 1. **叠两套循环**——LangGraph 上层再来个 `while`（`backend\graph.py:73-80` 已把循环交给图；只需写节点）。证据：选型卡 §1.1 同层二选一。
 2. **把 checkpoint（检查点 / 检查点器） 当记忆**——`SqliteSaver` 存 messages+state；要"事实/程序性记忆"得另开表（waku `state.db` 拆 `facts`/`episodes`/`chat_log`，`waku\db.py:12-76`）。
@@ -575,34 +571,23 @@ function flow（DSH：每步重新组装）
 13. **prompt cache 神圣**——slash 命令 mutate SP 必须 cache-aware：默认 deferred invalidation（下次 session 生效）+ 可选 `--now` 立即失效（上游 AGENTS.md）。
 14. **memory 写盘就以为进 SP**——`SOUL.md`/`user.md`/`memory.md` 在 Hermes 是稳定前缀；中途写盘**不**刷新当前 SP（`01-arch.md:181-201`）。
 
-### 4.3 📋 面试卡片（工程层）
-
-- **Q11：选 LangGraph 还是 Hermes 自研 loop？**
-  > 多步决策+审批+状态机 → LangGraph；成品个人助手+长会话+多渠道 → Hermes/waku。**不要叠**——见选型卡 §1.1。
-- **Q12：HITL 实现方式？**
-  > LangGraph：`interrupt` + `Command(resume=…)`。Hermes：`/stop` interrupt、approval/clarify gateway 命令。Pi：steering/follow-up 队列 + 扩展 `beforeToolCall`。DSH：靠 Eval + Release Gate（文档未明 HITL）。
-- **Q13：避免叠两套循环的核心判断？**
-  > "编排骨架只能选一个"——要么 StateGraph / ConversationLoop / runLoop / runAgentLoop / DSH 五件选 1，要么另一条作为工具/中间件挂上去。
-
----
-
-## 五、多智能体：什么时候值得拆
+### 3.3 多智能体：什么时候值得拆
 
 > 简短一节——D4 是 runtime 选型，多智能体协作是 D4 下半场；本文不展开。详见 `04-multiagent\` 实证。
 
-### 5.1 什么时候值得拆（**决策三问**）
+### 3.3.1 什么时候值得拆（**决策三问**）
 
 1. **每步 context 是不是明显不同？** 拆（`04-multiagent\01-single_vs_multi.py:58-72`：每步短上下文 = 摘要传递 = 不爆炸）。
 2. **每步是不是需要不同的工具 / 不同的 system？** 拆（`04-multiagent\04-langgraph_style.py:80-89` 把 plan/code/test 拆三个节点 + 共享 state）。
 3. **是否有清晰的状态机？** 用 `Phase` enum + `ALLOWED[Phase]` 约束迁移（`04-multiagent\03-phase_state_machine.py:32-65`）。
 
-### 5.2 单 Agent 长链 vs 多 Agent 短上下文（实证）
+### 3.3.2 单 Agent 长链 vs 多 Agent 短上下文（实证）
 
 `04-multiagent\01-single_vs_multi.py:50-72` 给出极简对比：
 - 单 Agent（`:52-55`）：把"需求分析+设计+编码+测试+审查"全塞进一次调用 → prompt 长、易混、易超长。
 - 多 Agent（`:60-72`）：每步独立 `system_hint` + 短 `scratchpad`，下一步只带上一段摘要（500 字）→ 总 prompt 长度可压缩 50–80%（具体因任务而异）。
 
-### 5.3 多 Agent 的几种模式（仓库实证）
+### 3.3.3 多 Agent 的几种模式（仓库实证）
 
 | 模式 | 实证文件 | 关键思想 |
 |------|---------|---------|
@@ -614,15 +599,21 @@ function flow（DSH：每步重新组装）
 | **State machine 阶段约束** | `04-multiagent\03-phase_state_machine.py:32-65`（`INIT→PLAN→EXEC→VERIFY→DONE`，`VERIFY→EXEC` 重做） | 流程硬约束进 enum |
 | **真实多智能体研究系统** | `11-langgraph\01-project-Complete-Agentic-AI-Course\03-LangChain-Multi-Agent-Research-System\app.py:1-544` + `src\pipelines\pipeline.py` + `src\agents\agents.py` | search→reader→writer→critic |
 
-### 5.4 多 Agent 在 runtime 上的耦合（一句话）
+### 3.3.4 多 Agent 在 runtime 上的耦合（一句话）
 
 - LangGraph：子 Agent = **图节点**（`11-langgraph\03-project-TripMate-AI-A-Multi-Agent-Travel-Planner-with-LangGraph\backend\graph.py:12-22`）——图本身就是 multi-agent 编排器；
 - Hermes / waku：用 `delegate_task` 调 subagent（`hermes-study\AGENTS.md` §"Delegation"；spawn depth 默认 2）；
 - Pi：Core 一次只跑一个 activeRun（`02-agent-loop.md:97`），多 Agent 走扩展；
 - DSH：Tool/Skill 都可调 sub-agent（推断：文档未给具体路径）。
 
-### 5.5 📋 面试卡片（多智能体）
+### 📋 面试卡片：工程层
 
+- **Q11：选 LangGraph 还是 Hermes 自研 loop？**
+  > 多步决策+审批+状态机 → LangGraph；成品个人助手+长会话+多渠道 → Hermes/waku。**不要叠**——见选型卡 §1.1。
+- **Q12：HITL 实现方式？**
+  > LangGraph：`interrupt` + `Command(resume=…)`。Hermes：`/stop` interrupt、approval/clarify gateway 命令。Pi：steering/follow-up 队列 + 扩展 `beforeToolCall`。DSH：靠 Eval + Release Gate（文档未明 HITL）。
+- **Q13：避免叠两套循环的核心判断？**
+  > "编排骨架只能选一个"——要么 StateGraph / ConversationLoop / runLoop / runAgentLoop / DSH 五件选 1，要么另一条作为工具/中间件挂上去。
 - **Q14：什么时候值得拆多 Agent？**
   > 三问：① context 不同？② 工具/system 不同？③ 状态机清晰？任一成立即可拆。`04-multiagent\01-single_vs_multi.py:58-72` 给单 vs 多 prompt 长度对比。
 - **Q15：多 Agent 输出冲突怎么解？**
@@ -632,7 +623,7 @@ function flow（DSH：每步重新组装）
 
 ---
 
-## 六、5 分钟速查卡（**末尾专用**）
+## 5 分钟速查卡（**末尾专用**）
 
 ```text
 [Runtime 是什么]      L4 层；同一类问题（拼上下文→调模型→工具→回灌→停）。
@@ -684,7 +675,7 @@ function flow（DSH：每步重新组装）
   LangGraph  : add_messages 累加 + checkpoint + 可选 store
   Hermes     : SOUL/user/memory Session 冻结 + transcript + External
   waku       : semantic(FTS5) + episodic + procedural(SKILL.md) + gate + consolidation
-  Pi         : Prompt 是栈（default → APPEND_SYSTEM → AGENTS/CLAUDE → skills → cwd）
+  Pi         : Prompt 是叠加层（default → APPEND_SYSTEM → AGENTS/CLAUDE → skills → cwd）
   DSH        : 配置驱动；改自身配置热重载
 
 [本机可跑性]
@@ -704,7 +695,7 @@ function flow（DSH：每步重新组装）
 
 ---
 
-## 七、面试问答卡（精选 6 问，与选型卡互补不重复）
+## 面试问答卡（精选 6 问，与选型卡互补不重复）
 
 > 选型卡已答"是什么/同层/语言门槛/HITL/记忆/Prompt Cache"等基础问题。本文补以下 6 问。
 
@@ -734,7 +725,7 @@ function flow（DSH：每步重新组装）
 
 ---
 
-## 附录 A：本文引用的仓库文件（绝对路径）
+## 附录 A：本文引用的仓库文件（仓库根相对全路径）
 
 - `00-我的深度整合专题\Agent面试5日冲刺\运行时选型-LangGraph-vs-Hermes.md`（312 行）
 - `04-multiagent\01-single_vs_multi.py`（102 行）/ `03-phase_state_machine.py`（92 行）/ `04-langgraph_style.py`（97 行）/ `09-task_routing.py`（106 行）/ `10-conflict_resolution.py`（74 行）/ `multi-agent-arch\README.md`（136 行）
@@ -752,7 +743,7 @@ function flow（DSH：每步重新组装）
 > **（推断）标注**（共 3 条，均符合"≤3 条"硬性要求）：
 > 1. §1.2 表中"①②③ framework 已有；②⑤ 大半 framework 有"——属个人对仓库描述的归纳总结，仓库未直说。
 > 2. §2.1 DSH 列"记忆三轨未在文档中给出（推断）"——`01.arch.md` 仅给"配置驱动"思想，没逐 token 拆解 memory 实现。
-> 3. §4.2 第 14 条 "memory 工具 schema 冲突……要立刻生效就新开 Session"——基于 `01-arch.md:181-201` 的推论，仓库未直说"立刻生效路径"。
+> 3. §3.2 第 14 条 "memory 工具 schema 冲突……要立刻生效就新开 Session"——基于 `01-arch.md:181-201` 的推论，仓库未直说"立刻生效路径"。
 
 > 备注：本文档**未修改任何源文件**；仅在 `00-我的深度整合专题\运行时选型深度解析\` 新建了 1 个 Markdown 文件。仓库根 `E:\AI_resource\AI-Engineer-from-scrach-main\` 未受影响。
 

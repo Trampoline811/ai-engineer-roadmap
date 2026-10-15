@@ -1,19 +1,19 @@
 # 推理与路由深度解析：从模型选择到生产级闭环
 
-> 本篇为冲刺压缩版（约 623 行）；按《专题创作指南》§转正规则，面试后可扩写至 1500+ 行完整版。
+> 本篇为冲刺压缩版（约 755 行）；按《专题创作指南》§转正规则，面试后可扩写至 1500+ 行完整版。
 
 ## 目录
 
 - [0. 前言：为什么 L1 推理层是"缺失的一环"](#0-前言为什么-l1-推理层是缺失的一环)
 - [📍 本页定位与蒸馏溯源](#-本页定位与蒸馏溯源)
 - [第一层 · 概念层：L1 推理层到底要定哪些事](#第一层--概念层l1-推理层到底要定哪些事)
-  - 1.1 L1 的五件事（仓库里的全图） / 1.2 模型的两类身份 / 1.3 推理引擎的两条路线 / 1.4 路由的本质 / 1.5 缓存的三档 / 1.6 成本治理的"事前 / 事中 / 事后" / 📋 面试卡片
+  - 1.1 L1 的五件事（仓库里的全图） / 1.2 模型的两类身份 / 1.3 推理引擎的两条路线 / 1.4 路由的本质 / 1.5 缓存的三档 / 1.6 成本治理的"事前 / 事中 / 事后" / 1.7 因果链：L1 各决策之间的前提关系 / 📋 面试卡片
 - [第二层 · 实现层：把 11 个模块拆成"机制 → 伪代码 → 关键参数"](#第二层--实现层把-11-个模块拆成机制--伪代码--关键参数)
-  - 2.0 闭环五步 / 2.1 主线 A 保护机制 / 2.2 主线 B 缓存机制 / 2.3 主线 C 成本治理 / 2.4 主线 D 可观测 / 2.5 外挂 1 工具权限 / 2.6 外挂 2 幻觉治理 / 2.7 三个底层概念精简版 / 📋 面试卡片
+  - 2.0 本章导引 / 2.1 主线 A 保护机制 / 2.2 主线 B 缓存机制 / 2.3 主线 C 成本治理 / 2.4 主线 D 可观测 / 2.5 外挂 1 工具权限 / 2.6 外挂 2 幻觉治理 / 2.7 三个底层概念精简版 / 📋 面试卡片
 - [第三层 · 工程层：什么时候上 / 怎么避坑 / 三段式治理](#第三层--工程层什么时候上--怎么避坑--三段式治理)
   - 3.1 决策树 / 3.2 部署策略 / 3.3 成本治理三段式 / 3.4 避坑清单 16 条 / 3.5 与其他层的关系 / 📋 面试卡片
 - [📌 5 分钟速查卡（可打印）](#-5-分钟速查卡可打印)
-- [附录 A：仓库路径全索引](#附录-a仓库路径全索引行号精度) / [附录 B：诚实清单](#附录-b诚实清单) / [附录 C：中英对照术语表](#附录-c中英对照术语表)
+- [附录 A：仓库路径全索引](#附录-a仓库路径全索引行号精度) / [附录 B：中英对照术语表](#附录-b中英对照术语表看不懂正文就回来查这里) / [附录 C：诚实清单](#附录-c诚实清单)
 
 ---
 
@@ -31,28 +31,26 @@
 | **月底对账** | "这个月花了 $5000" → 没人能回答"哪个 prompt 烧的" | `ledger.records` 每条带 `request_id / model / tokens / cost / degraded`，可按任何维度切片 |
 | **调错模型** | 把 `gpt-4o-mini` 的输出当 `gpt-4o-pro` 用 → 用户抱怨质量差没人知道 | `attributes.model` 写在 Span（跨度） 里 → 看 trace（追踪） 立刻定位 → 调路由 |
 
-### 失败模式 ASCII：无路由 / 无熔断 / 无缓存 / 无计费时怎么炸
+### 失败模式：无路由 / 无熔断 / 无缓存 / 无计费时怎么炸
 
-```text
-① 无路由 ─────────────────────────────────────────────
-  用户问"1+1" → 调 gpt-4o-pro → $0.01/次 → 每天 10 万次 → $1000/天
-  解：按 complexity 路由 → mini/$0.0001/次 → $10/天，节省 99%
-
-② 无熔断 ─────────────────────────────────────────────
-  09:00  下游 API 故障 → 1000 个请求同时打过去 → 全部超时 → 雪崩
-  09:00:01 第 3 次失败触发熔断 → 拒绝 997 个请求 → 释放下游
-  09:00:30  半开期探测 3 个 → 1 成功 → 慢慢恢复
-  解：breaker.allow() + 半开期限流，避免雪崩
-
-③ 无缓存 ─────────────────────────────────────────────
-  "公司年假多少天" 被问 1000 次 → 1000 次实调 → $20/天
-  加精确缓存 → 第 1 次实调，第 2~1000 次命中 → $0.02/天
-  解：cache_fingerprint + cache_lookup
-
-④ 无计费 ─────────────────────────────────────────────
-  调了 5 万次 → 月底账单 $3000 → 没人能解释
-  加 ledger.record → 每条带 model/tokens/cost → 月底按 model 切片 → "80% 花在 gpt-4o-pro 的 5% 任务上"
-  解：billing.record() + reconcile() 估算告警
+```mermaid
+flowchart TD
+    subgraph P1["① 无路由"]
+        A1["用户问「1+1」→ 调 gpt-4o-pro → $0.01/次 → 每天 10 万次 → $1000/天"] --> A2["解：按 complexity 路由 → mini/$0.0001/次 → $10/天，节省 99%"]
+    end
+    subgraph P2["② 无熔断"]
+        B1["09:00 下游 API 故障 → 1000 个请求同时打过去 → 全部超时 → 雪崩"] --> B2["09:00:01 第 3 次失败触发熔断 → 拒绝 997 个请求 → 释放下游"]
+        B2 --> B3["09:00:30 半开期探测 3 个 → 1 成功 → 慢慢恢复"]
+        B3 --> B4["解：breaker.allow() + 半开期限流，避免雪崩"]
+    end
+    subgraph P3["③ 无缓存"]
+        C1["「公司年假多少天」被问 1000 次 → 1000 次实调 → $20/天"] --> C2["加精确缓存 → 第 1 次实调，第 2~1000 次命中 → $0.02/天"]
+        C2 --> C3["解：cache_fingerprint + cache_lookup"]
+    end
+    subgraph P4["④ 无计费"]
+        D1["调了 5 万次 → 月底账单 $3000 → 没人能解释"] --> D2["加 ledger.record → 每条带 model/tokens/cost → 月底按 model 切片 →「80% 花在 gpt-4o-pro 的 5% 任务上」"]
+        D2 --> D3["解：billing.record() + reconcile() 估算告警"]
+    end
 ```
 
 > **一句话定锚**：L1 推理层不是"高级选项"，是"**让模型调用从 demo 变生产的最低门槛**"。`05-model-route\README.md:36` 的闭环 ASCII 图就是这张失败模式图的"修好版"。
@@ -72,7 +70,7 @@
 
 ### a) 在计划中的位置
 
-本页服务于 **5 日冲刺 D3** 的 **「上午 09:00–12:00 推理 + 动作时间盒」前半段**，对应**六层栈的 L1 推理层（模型 · 引擎 · 路由 · 成本）**。D3 下午会衔接 L3 动作层（工具调用 + 权限 + 审计），由 `05-model-route\08\guard\` 三件套承担；D5 收口时 L1 的 trace（追踪） 与 L2 记忆、L4 运行时、L5 观测一起被纳入"可观测闭环"。
+本页服务于 **5 日冲刺 D3** 的 **「上午 09:00–12:00 推理 + 动作时间盒」前半段**，对应**六层的 L1 推理层（模型 · 引擎 · 路由 · 成本）**。D3 下午会衔接 L3 动作层（工具调用 + 权限 + 审计），由 `05-model-route\08\guard\` 三件套承担；D5 收口时 L1 的 trace（追踪） 与 L2 记忆、L4 运行时、L5 观测一起被纳入"可观测闭环"。
 
 ### b) 被蒸馏源明细
 
@@ -122,17 +120,15 @@
 
 ### 1.1 L1 的五件事（仓库里的全图）
 
-```text
-                   ┌─────────────────────────────────────┐
-                   │  L1 推理层（一次"出行"的需求）       │
-                   └─────────────────────────────────────┘
-                                  │
-   ┌──────────┬──────────┬───────┼────────┬──────────┐
-   ▼          ▼          ▼       ▼        ▼          ▼
- 模型选型    路由        保护   缓存    成本治理    可观测
- (选车)    (上高速)    (ETC)  (加油站) (ETC对账)  (GPS+黑匣子)
-   │          │          │       │        │          │
- 01~03     05+07     01+05   02+03+10   05+06      07
+```mermaid
+flowchart TD
+    L1["L1 推理层（一次「出行」的需求）"]
+    L1 --> N1["模型选型<br/>（选车）<br/>模块 01~03"]
+    L1 --> N2["路由<br/>（上高速）<br/>模块 05 + 07"]
+    L1 --> N3["保护<br/>（ETC）<br/>模块 01 + 05"]
+    L1 --> N4["缓存<br/>（加油站）<br/>模块 02 + 03 + 10"]
+    L1 --> N5["成本治理<br/>（ETC 对账）<br/>模块 05 + 06"]
+    L1 --> N6["可观测<br/>（GPS + 黑匣子）<br/>模块 07"]
 ```
 
 | 维度 | 仓库对应模块 | 一句话定义 | 出处 |
@@ -175,17 +171,15 @@
 
 ### 1.4 路由的本质：成本 vs 智商的两难
 
-```text
-              智商（任务能力）
-                   ▲
-   gpt-4o-pro ●    │          ◯ 路由目标
-                   │
-   gpt-4o    ●     │
-                   │   ◯ 按 complexity 自动挑
-   gpt-4o-mini ●   │
-                   │
-                   └──────────────────▶ 成本（$ / 1M tok）
-                      0.5      5      10
+```mermaid
+flowchart TD
+    Y["智商（任务能力）：高"] --> P3["gpt-4o-pro  ●<br/>成本 10"]
+    P3 --> P2["gpt-4o  ●<br/>成本 5"]
+    P2 --> P1["gpt-4o-mini  ●<br/>成本 0.5"]
+    P1 --> X["成本（$ / 1M tok）：0.5 → 5 → 10"]
+    P1 -.-> R["◯ 路由目标：按 complexity 自动挑"]
+    P2 -.-> R
+    P3 -.-> R
 ```
 
 - **路由的三种入参（课程观点）**：`complexity` / `prompt_tokens`（请求长度，决定账单大头，`05-model-route\02\cache\tokens.py:7` `approx_token_count`）/ `model`
@@ -218,23 +212,13 @@
 
 ### 1.7 因果链：L1 各决策之间的前提关系
 
-```text
-"应用直接调某家闭源 API"（零封装）
-   │ 于是必须先回答
-   ▼
-① 权重从哪来（开放权重 vs 闭源 API）   ← 决定能否自托管、能否随时换模型
-   │ 决定
-   ▼
-② 用什么引擎把它跑起来（Ollama / llama.cpp  vs  vLLM / SGLang）  ← 决定并发上限与单位成本
-   │ 决定
-   ▼
-③ 要不要路由层（LiteLLM / 自研 / 不上）  ← 只有"多模型 / 多端点"时才成立，单模型可省
-   │ 决定
-   ▼
-④ 缓存与降级（精确 / 两级 / 语义  +  熔断 / 重试 / 回退）  ← 只有"调用变贵 / 变慢"后才值得上
-   │ 决定
-   ▼
-⑤ 成本治理三段式（事前预算 / 事中记账 / 事后对账）  ← 前四步都做了才有账可对
+```mermaid
+flowchart TD
+    A["「应用直接调某家闭源 API」（零封装）"] -->|于是必须先回答| B["① 权重从哪来（开放权重 vs 闭源 API）<br/>← 决定能否自托管、能否随时换模型"]
+    B -->|决定| C["② 用什么引擎把它跑起来（Ollama / llama.cpp vs vLLM / SGLang）<br/>← 决定并发上限与单位成本"]
+    C -->|决定| D["③ 要不要路由层（LiteLLM / 自研 / 不上）<br/>← 只有「多模型 / 多端点」时才成立，单模型可省"]
+    D -->|决定| E["④ 缓存与降级（精确 / 两级 / 语义 + 熔断 / 重试 / 回退）<br/>← 只有「调用变贵 / 变慢」后才值得上"]
+    E -->|决定| F["⑤ 成本治理三段式（事前预算 / 事中记账 / 事后对账）<br/>← 前四步都做了才有账可对"]
 ```
 
 **依赖要点**：③④⑤ 都是"奢侈项"——它们的前提是"你已经有多模型、多调用、可观账单"。
@@ -262,23 +246,7 @@
 
 > 把 11 个模块按"机制"重排成 **4 条主线 + 2 个外挂**。
 
-### 2.0 闭环五步（出自 `05-model-route\README.md:36`）
-
-```text
-请求 → route.decision → breaker.allow?
-        ↓ 否 → fallback → billing
-        ↓ 是 → retry + llm.chat
-             ↓ 失败 → fallback → billing
-             ↓ 成功 → billing
-```
-
-| 步骤 | 函数 | 文件:行 |
-|------|------|---------|
-| 1. 路由 | `route_by_complexity(complexity)` | `05-model-route\05\pipeline\router.py:10` |
-| 2. 熔断放行 | `breaker.allow()` + `breaker.before_call()` | `05-model-route\01\breaker\circuit_breaker.py:28-42` |
-| 3. 重试 | `call_with_breaker_and_retry(fn, breaker, max_retries)` | `05-model-route\01\breaker\retry.py:10` |
-| 4. 降级 | `fallback_invoke(user_msg, failed_model, providers)` | `05-model-route\05\pipeline\fallback.py:16` |
-| 5. 计费 | `ledger.record(model, p_tok, c_tok, degraded)` | `05-model-route\05\pipeline\billing.py:26` |
+### 2.0 本章导引
 
 #### 2.0.1 符号表（本文用到的缩写与参数）
 
@@ -300,7 +268,31 @@
 | `fingerprint` | 请求指纹（SHA256 键） | `05-model-route\02\cache\fingerprint.py:5` |
 | `FALLBACK_CHAIN` | 降级链 `["gpt-4o", "gpt-4o-mini", "static-template"]` | `05-model-route\05\pipeline\fallback.py:13` |
 
-#### 2.0.2 学习路径（推荐阅读顺序）
+#### 2.0.2 入口表：闭环五步（出自 `05-model-route\README.md:36`）
+
+```mermaid
+flowchart TD
+    R["请求"] --> D["route.decision"] --> Q{"breaker.allow?"}
+    Q -->|否| F1["fallback"] --> BA["billing"]
+    Q -->|是| T["retry + llm.chat"]
+    T -->|失败| F2["fallback"] --> BB["billing"]
+    T -->|成功| BC["billing"]
+```
+
+| 步骤 | 函数 | 文件:行 |
+|------|------|---------|
+| 1. 路由 | `route_by_complexity(complexity)` | `05-model-route\05\pipeline\router.py:10` |
+| 2. 熔断放行 | `breaker.allow()` + `breaker.before_call()` | `05-model-route\01\breaker\circuit_breaker.py:28-42` |
+| 3. 重试 | `call_with_breaker_and_retry(fn, breaker, max_retries)` | `05-model-route\01\breaker\retry.py:10` |
+| 4. 降级 | `fallback_invoke(user_msg, failed_model, providers)` | `05-model-route\05\pipeline\fallback.py:16` |
+| 5. 计费 | `ledger.record(model, p_tok, c_tok, degraded)` | `05-model-route\05\pipeline\billing.py:26` |
+
+#### 2.0.3 双模式阅读
+
+- **快速模式**（面试前 1 小时）：只看 2.1 ~ 2.6 的"机制一句话 + 关键参数表"。
+- **深入模式**（要写代码）：跟着 `05-model-route\05\pipeline\invoke.py:14` 一行行对照其它模块读。
+
+#### 2.0.4 学习路径（推荐阅读顺序）
 
 ```mermaid
 flowchart TD
@@ -323,10 +315,6 @@ flowchart TD
     I --> L[3.3 成本三段]
     J & K & L --> M[📌 速查卡 + 附录 A/B/C]
 ```
-
-**双模式阅读**：
-- **快速模式**（面试前 1 小时）：只看 2.1 ~ 2.6 的"机制一句话 + 关键参数表"。
-- **深入模式**（要写代码）：跟着 `05-model-route\05\pipeline\invoke.py:14` 一行行对照其它模块读。
 
 ### 2.1 主线 A：保护机制——熔断 + 重试 + 退避
 
@@ -360,14 +348,12 @@ fn call_with_breaker_and_retry(fn, breaker, max_retries):
 
 **三态迁移**（`05-model-route\01\breaker\state.py:4`）：
 
-```text
-  CLOSED ──连续失败达阈值──▶ OPEN
-    ▲                          │
-    │ 连续成功达阈值            │ open_seconds 到点
-    │                          ▼
-    └───── HALF_OPEN ◀──────────┘
-              │
-              └ 半开期只要失败 → 立即重新跳闸
+```mermaid
+stateDiagram-v2
+    CLOSED --> OPEN : 连续失败达阈值
+    OPEN --> HALF_OPEN : open_seconds 到点
+    HALF_OPEN --> CLOSED : 连续成功达阈值
+    HALF_OPEN --> OPEN : 半开期只要失败 → 立即重新跳闸
 ```
 
 > **一句话总结**："**熔断 = 给下游发个病假条，重试 = 趁病假没生效前再试一次**"。仓库里这套是教科书级别最简实现，**生产应补滑动窗口失败率**（课程观点，仓库未实现）。
@@ -449,13 +435,14 @@ Span { trace_id / span_id / kind(9选1) / name / start_ms / end_ms / attributes 
 
 **调用链示例**（`05-model-route\07\main.py:14-44`）：
 
-```text
-Trace("...", goal="总结本周迭代")
-├─ Span(ROUTE, "pick_model",      {complexity=medium, model=gpt-4o})
-├─ Span(CACHE, "exact_cache",     {key=abc123, hit=false})
-├─ Span(BREAKER, "allow_call",    {state=CLOSED})
-├─ Span(LLM, "chat_completion",   {model=gpt-4o, prompt_tokens=120, completion_tokens=80})
-└─ Span(BILLING, "record_usage",  {cost_usd=0.001})
+```mermaid
+flowchart TD
+    T["Trace('...', goal='总结本周迭代')"]
+    T --> S1["Span(ROUTE, 'pick_model', {complexity=medium, model=gpt-4o})"]
+    T --> S2["Span(CACHE, 'exact_cache', {key=abc123, hit=false})"]
+    T --> S3["Span(BREAKER, 'allow_call', {state=CLOSED})"]
+    T --> S4["Span(LLM, 'chat_completion', {model=gpt-4o, prompt_tokens=120, completion_tokens=80})"]
+    T --> S5["Span(BILLING, 'record_usage', {cost_usd=0.001})"]
 ```
 
 > **一句话总结可观测**："**Trace 是'一趟出差的总账'，Span 是'沿途每一次动作的发票'**"。
@@ -542,55 +529,36 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 
 ### 3.1 决策树：什么时候该上什么机制
 
-```text
-                你要做的事
-                    │
-                    ▼
-        ┌───────────────────────────┐
-        │ 调一次模型就够？           │  ──否──▶ 进入循环 / Agent（Harness 范畴）
-        └───────────────────────────┘
-                    │ 是
-                    ▼
-        ┌───────────────────────────┐
-        │ 同一 prompt 会被调多次？   │  ──是──▶ 上精确缓存（02）
-        └───────────────────────────┘            │ 否
-                    │ 否                         ▼
-                    ▼               ┌───────────────────────────┐
-        ┌───────────────────────────┐│ 同一问题换措辞会被问多次？│─是─▶ 加语义缓存（10）
-        │ 单条 prompt 花钱 < $0.01？│└───────────────────────────┘  注意按 tenant 隔离
-        └───────────────────────────┘
-                    │ 否
-                    ▼
-        ┌───────────────────────────┐
-        │ 流量峰值 > 5 QPS？         │  ──是──▶ 加 Semaphore + 双层缓存（03）
-        └───────────────────────────┘
-                    │ 否
-                    ▼
-        ┌───────────────────────────┐
-        │ 同一类任务有难易区分？     │  ──是──▶ 上按复杂度路由（05）
-        └───────────────────────────┘
-                    │ 否
-                    ▼
-        ┌───────────────────────────┐
-        │ 下游会 5xx / 超时？        │  ──是──▶ 上熔断 + 重试 + 降级（01 + 05）
-        └───────────────────────────┘
-                    │ 否
-                    ▼
-        ┌───────────────────────────┐
-        │ 老板要看花了多少钱？       │  ──是──▶ 上 before/during/after 三段式
-        └───────────────────────────┘
+```mermaid
+flowchart TD
+    START["你要做的事"] --> Q1{"调一次模型就够？"}
+    Q1 -->|否| A0["进入循环 / Agent（Harness 范畴）"]
+    Q1 -->|是| Q2{"同一 prompt 会被调多次？"}
+    Q2 -->|是| A1["上精确缓存（02）"]
+    Q2 -->|否| Q3{"同一问题换措辞会被问多次？"}
+    Q3 -->|是| A2["加语义缓存（10）<br/>注意按 tenant 隔离"]
+    Q3 -->|否| Q4{"单条 prompt 花钱 &lt; $0.01？"}
+    Q4 -->|否| Q5{"流量峰值 &gt; 5 QPS？"}
+    Q5 -->|是| A3["加 Semaphore + 双层缓存（03）"]
+    Q5 -->|否| Q6{"同一类任务有难易区分？"}
+    Q6 -->|是| A4["上按复杂度路由（05）"]
+    Q6 -->|否| Q7{"下游会 5xx / 超时？"}
+    Q7 -->|是| A5["上熔断 + 重试 + 降级（01 + 05）"]
+    Q7 -->|否| Q8{"老板要看花了多少钱？"}
+    Q8 -->|是| A6["上 before/during/after 三段式"]
 ```
 
 > **(推断)** 仓库里 11 个模块全上 = "**生产级 L1 全套**"；只上 01 + 05 = "**最小可用**"；一个不上 = "**demo 级**，别上生产"。
 
 ### 3.2 部署策略：蓝绿 vs 金丝雀（09 模块）
 
-```text
-  大版本 / 配置整体变更？──是──▶ 蓝绿（双倍资源，回滚秒级）
-                          否
-  模型 / API 频繁迭代？  ──是──▶ 金丝雀（md5(user_id)%100 < pct 稳定分流）
-                          否
-  完全没在生产跑过？     ──是──▶ 影子流量（仓库未实现，课程观点）
+```mermaid
+flowchart TD
+    Q1{"大版本 / 配置整体变更？"} -->|是| A1["蓝绿（双倍资源，回滚秒级）"]
+    Q1 -->|否| Q2{"模型 / API 频繁迭代？"}
+    Q2 -->|是| A2["金丝雀（md5(user_id)%100 &lt; pct 稳定分流）"]
+    Q2 -->|否| Q3{"完全没在生产跑过？"}
+    Q3 -->|是| A3["影子流量（仓库未实现，课程观点）"]
 ```
 
 **关键参数**：
@@ -602,12 +570,9 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 
 ### 3.3 成本治理三段式（05 + 06 模块）
 
-```text
-   before（预算与估算）      during（调用即记账）     after（估算 vs 账单对账）
-        │                          │                       │
-   approx_token_count()       ledger.record(...)      reconcile(...)
-   02\cache\tokens.py:7       05\pipeline\billing.py:26    06\billing\reconcile.py:15
-                                                          alert > 10% → 告警
+```mermaid
+flowchart LR
+    B["before（预算与估算）<br/>approx_token_count()<br/>05-model-route\02\cache\tokens.py:7"] --> D["during（调用即记账）<br/>ledger.record(...)<br/>05-model-route\05\pipeline\billing.py:26"] --> A["after（估算 vs 账单对账）<br/>reconcile(...)<br/>05-model-route\06\billing\reconcile.py:15<br/>alert &gt; 10% → 告警"]
 ```
 
 - **before**：`tokens = approx_token_count(prompt, model)`；**（推断）超阈值可拒答/转人工，仓库未实现**
@@ -639,13 +604,13 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 
 ### 3.5 与其他层的关系（L1 不是孤岛）
 
-```text
-        L1 推理层（本页）
-            ├── 出口挂 L3 动作层：08 三道闸（白名单/Schema/审计）
-            ├── 入口挂 L0 协议层：complexity 从任务元数据来（推断）
-            ├── 运行中挂 L4 运行时：loop 每轮调模型 = invoke_with_pipeline
-            ├── 写入时挂 L2 记忆层：trace attributes 携带记忆引用（推断）
-            └── 收口挂 L5 评测层：账单 + trace + 反馈 → L5 评估
+```mermaid
+flowchart LR
+    L1["L1 推理层（本页）"] -->|出口| N1["L3 动作层：08 三道闸（白名单 / Schema / 审计）"]
+    L1 -->|入口| N2["L0 协议层：complexity 从任务元数据来（推断）"]
+    L1 -->|运行中| N3["L4 运行时：loop 每轮调模型 = invoke_with_pipeline"]
+    L1 -->|写入时| N4["L2 记忆层：trace attributes 携带记忆引用（推断）"]
+    L1 -->|收口| N5["L5 评测层：账单 + trace + 反馈 → L5 评估"]
 ```
 
 > **一句话总结工程层**："**L1 是其他所有层的中转站——入口接元数据，出口接动作，运行中跑循环，事后被评测**"。
@@ -664,17 +629,17 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 | 8 | 语义缓存最大风险？ | 答非所问 + 租户串数据 + 过期知识 + 幻觉放大（`05-model-route\10\cache\risks.py:1`） |
 | 9 | 账单为什么不只记成功？ | 降级到 static-template 也要记，方便事后分析（`05-model-route\05\pipeline\invoke.py:40`） |
 | 10 | Trace 必挂的 SpanKind？ | 至少 4 个：ROUTE / LLM / CACHE / BILLING（`05-model-route\07\trace\kinds.py:4`） |
-| 11 | L1 在六层栈里的位置？ | 中转站——入口接 L0 元数据，出口接 L3 动作，运行中跑 L4 loop，事后给 L5 评测 |
+| 11 | L1 在六层里的位置？ | 中转站——入口接 L0 元数据，出口接 L3 动作，运行中跑 L4 loop，事后给 L5 评测 |
 
 ---
 
 ## 📌 5 分钟速查卡（可打印）
 
-### A. L1 一句话答法
+### 速查 1 · L1 一句话答法
 
 > **"L1 推理层 = 给每次模型调用安排一条'可控、可观测、可降级、可计费'的路径。先按 complexity 路由，再过熔断+重试+降级保护，按精度选缓存档，按 PRICING 记账，最后挂 Span 让事后可追。"** — 出处 `05-model-route\README.md:36` 闭环图
 
-### B. 11 个模块一句话归纳
+### 速查 2 · 11 个模块一句话归纳
 
 | 模块 | 一句话 |
 |------|--------|
@@ -690,7 +655,7 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 | 10 语义缓存 | Jaccard 演示版 + 4 类真实风险 |
 | 11 幻觉治理 | RAG grounding → Citation 拒答 → 反馈审计 |
 
-### C. 关键参数速查（10 条）
+### 速查 3 · 关键参数速查（10 条）
 
 | 参数 | 默认值 | 模块 |
 |------|--------|------|
@@ -705,19 +670,18 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 | `alert_threshold_pct` | 10% | `05-model-route\06\billing\reconcile.py:19` |
 | `canary_pct` | 10 | `05-model-route\09\deploy\canary.py:4` |
 
-### D. 闭环 ASCII 速记
+### 速查 4 · 闭环速记
 
-```text
-请求 → route.decision(complexity) → breaker.allow?
-        ↓ 否                          ↓ 是
-    fallback(链)                  retry + llm.chat
-        ↓                              ↓ 失败
-        └────────▶ billing ◀────── fallback(链)
-                       ↓
-                    ledger.record(...)
+```mermaid
+flowchart TD
+    R["请求"] --> D["route.decision(complexity)"] --> Q{"breaker.allow?"}
+    Q -->|否| F1["fallback（链）"] --> BL["billing"]
+    Q -->|是| T["retry + llm.chat"]
+    T -->|失败| F2["fallback（链）"] --> BL
+    BL --> LG["ledger.record(...)"]
 ```
 
-### E. 三个底层概念速记
+### 速查 5 · 三个底层概念速记
 
 | 概念 | 一句话 |
 |------|--------|
@@ -747,7 +711,7 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 | MoE | `07-llm_from_scrach\part_5\moe.py:14-101` / `07-llm_from_scrach\part_5\gating.py:38-83` |
 | GRPO | `07-llm_from_scrach\part_9\grpo_loss.py:21-65` / `07-llm_from_scrach\part_9\GRPO_TRAINING_EXPLANATION.md` |
 
-### E. 中英对照术语表（看不懂正文就回来查这里）
+## 附录 B：中英对照术语表（看不懂正文就回来查这里）
 
 > 阅读规则：**正文里第一次出现某行话时都会写成「词（中文）」**；本表是兜底，不是首次解释。
 
@@ -783,7 +747,7 @@ fn invoke_tool_layered(tool_name, args, tools, whitelist, audit):
 | FLOPs / QPS | 浮点运算量 / 每秒查询数 | 前者是算力消耗，后者是吞吐压力 |
 | Tenant | 租户 | 同一个系统里的不同客户；缓存和账本必须互相隔离 |
 
-## 附录 B：诚实清单
+## 附录 C：诚实清单
 
 - **(推断)** 全篇约 20 处，凡决策树、避坑 3/4/6/7/8/9/11/15、3.3 before 拒答等"生产应做但仓库未实现"的部分都标了 (推断)；**所有真实路径都已通过仓库核验**。
 - **重复**：模块 11 的三段式（`05-model-route\11\governance\`）与模块 02/05/06 组合出的成本三段式是同一模式复用，仓库自身在示范"横切关注点都走 before/during/after"。
