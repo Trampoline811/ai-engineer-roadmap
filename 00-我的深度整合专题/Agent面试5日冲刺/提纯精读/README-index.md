@@ -55,7 +55,7 @@
 ## 与已有专题的关系（不重造）
 
 - 记忆：`00-我的深度整合专题\Agent记忆深度解析\Agent_Memory_Deep_Dive.md`（1531 行）已覆盖 03-memory 四 notebook → **P2 只补实现对照**，不重做。
-- RAG 评估：`00-我的深度整合专题\RAG评估深度解析\RAG_Evaluation_Deep_Dive.md`（2861 行）已完备 → D2/D5 **直接复用**。
+- RAG 评估：`00-我的深度整合专题\RAG评估深度解析\RAG_Evaluation_Deep_Dive.md`（2803 行）已完备 → D2/D5 **直接复用**。
 - 插件源码速览：`00-我的深度整合专题\Agent面试5日冲刺\prep0-plugin-memory-arch.md`（29 行）→ D2 预习；插件源码在仓库外 `~/.dsh/profiles/web/node_modules/dsh-memory-evolve/lib/`。
 
 ## 转正规则（面试后可选）

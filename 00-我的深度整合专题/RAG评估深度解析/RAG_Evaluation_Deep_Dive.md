@@ -64,17 +64,14 @@
 
 ### RAG 管道的三大失败模式
 
-```
-用户提问
-  │
-  ├── ❌ 失败模式 1：检索失败（Recall 低 / Precision 低）
-  │     └── 找不到相关信息，或找到的全是噪声
-  │
-  ├── ❌ 失败模式 2：生成幻觉（Faithfulness 低）
-  │     └── 找到了信息但 LLM 不按文档回答，自己瞎编
-  │
-  └── ❌ 失败模式 3：答非所问（Answer Relevancy 低）
-        └── 答案内容正确但没回答用户的实际问题
+```mermaid
+flowchart TD
+    Q[用户提问] --> F1[❌ 失败模式 1：检索失败（Recall 低 / Precision 低）]
+    F1 --> F1A[找不到相关信息，或找到的全是噪声]
+    Q --> F2[❌ 失败模式 2：生成幻觉（Faithfulness 低）]
+    F2 --> F2A[找到了信息但 LLM 不按文档回答，自己瞎编]
+    Q --> F3[❌ 失败模式 3：答非所问（Answer Relevancy 低）]
+    F3 --> F3A[答案内容正确但没回答用户的实际问题]
 ```
 
 **四大指标正好覆盖这三大失败模式，缺一不可。**
@@ -87,19 +84,17 @@
 
 RAG 系统由两个组件构成——**检索器（Retriever）** 和 **生成器（Generator）**。评估需要同时覆盖两个组件在两个维度上的表现。
 
-```
-                 ┌─────────────────┬──────────────────┐
-                 │    完整性        │      精准性       │
-       ┌─────────┼─────────────────┼──────────────────┤
-       │ 检索端  │ Context Recall  │ Context Precision│
-       │ (找)    │ "该找的都找到了吗"│ "找的都相关吗"    │
-       ├─────────┼─────────────────┼──────────────────┤
-       │ 生成端  │       —         │ Answer Relevancy │
-       │ (答)    │ (生成端没有"完整性 │ "答的切题吗"      │
-       │         │  指标"——信息完整  ├──────────────────┤
-       │         │  性靠 Recall 保证)│  Faithfulness    │
-       │         │                 │ "有没有瞎编"      │
-       └─────────┴─────────────────┴──────────────────┘
+```mermaid
+flowchart LR
+    subgraph DIMA["完整性"]
+        A1["检索端（找）<br/>Context Recall<br/>该找的都找到了吗"]
+        A2["生成端（答）：—<br/>（生成端没有「完整性指标」——信息完整性靠 Recall 保证）"]
+    end
+    subgraph DIMB["精准性"]
+        B1["检索端（找）<br/>Context Precision<br/>找的都相关吗"]
+        B2["生成端（答）<br/>Answer Relevancy<br/>答的切题吗"]
+        B3["生成端（答）<br/>Faithfulness<br/>有没有瞎编"]
+    end
 ```
 
 **为什么生成端没有"完整性"指标？** 因为答案的完整性由检索端决定——Recall 低意味着关键信息没找到，Generator 拿不到原材料自然无法给出完整答案。这是 RAG 架构的核心因果链。
@@ -115,18 +110,17 @@ RAG 系统由两个组件构成——**检索器（Retriever）** 和 **生成�
 > - **Recall = 6/10 = 0.60** → 还有 4 条鱼漏网了。中文里"漏网之鱼"说的就是这个——**该捞的没捞全**
 > - **Precision = 6/8 = 0.75** → 捞上来的有 2 样是垃圾。**捞上来的不干净，混了噪声**
 
-```
-同一个撒网动作：
-  撒了 8 样东西上来（Retrieved）
-  ├── 6 条鱼 ✅（命中）
-  ├── 1 只靴子 ❌（噪声）
-  └── 1 把水草 ❌（噪声）
-
-  池塘里还有 4 条鱼没捞到（漏召回）
-
-  分母不同 → 回答不同问题：
-  Recall = 6/10    分母是池塘里所有的鱼（GT）
-  Precision = 6/8  分母是捞上来的所有东西（Retrieved）
+```mermaid
+flowchart TD
+    A["同一个撒网动作：撒了 8 样东西上来（Retrieved）"]
+    A --> B["6 条鱼 ✅（命中）"]
+    A --> C["1 只靴子 ❌（噪声）"]
+    A --> D["1 把水草 ❌（噪声）"]
+    A --> E["池塘里还有 4 条鱼没捞到（漏召回）"]
+    B --> F["分母不同 → 回答不同问题"]
+    E --> F
+    F --> G["Recall = 6/10<br/>分母是池塘里所有的鱼（GT）"]
+    F --> H["Precision = 6/8<br/>分母是捞上来的所有东西（Retrieved）"]
 ```
 
 | 指标                   | 低分含义                                 | 典型原因                              | 对下游影响                                   |
@@ -151,17 +145,15 @@ RAG 系统由两个组件构成——**检索器（Retriever）** 和 **生成�
 | 🤥**吹牛** | "招牌菜是红烧肉饭，用的是日本神户和牛，由米其林三星主厨掌勺" |   ✅ 高   |    ❌ 低    | 回答了问题，但**神户和牛、米其林是编的**——幻觉 |
 | 💀**离谱** | "今天天气很好，适合散步，明天可能会下雨记得带伞"             |   ❌ 低   |    ❌ 低    | 既没回答问题，也全是废话——最差情况                   |
 
-```
-同一个场景，两个维度：
-  顾客问"今天有什么招牌菜？"
-
-  Relevancy 问：你回答的是"招牌菜"吗？还是扯别的去了？
-  ├── 高 Relevancy → 答案围绕着招牌菜在说
-  └── 低 Relevancy → 答非所问（哪怕内容全是对的也没用）
-
-  Faithfulness 问：你说的这些，菜单上真有吗？
-  ├── 高 Faithfulness → 每个说法都能在菜单上找到依据
-  └── 低 Faithfulness → 你编了菜单上没有的东西（神户和牛、米其林）
+```mermaid
+flowchart TD
+    S["同一个场景，两个维度：顾客问「今天有什么招牌菜？」"]
+    S --> R["Relevancy 问：你回答的是「招牌菜」吗？还是扯别的去了？"]
+    S --> FA["Faithfulness 问：你说的这些，菜单上真有吗？"]
+    R --> RH["高 Relevancy → 答案围绕着招牌菜在说"]
+    R --> RL["低 Relevancy → 答非所问（哪怕内容全是对的也没用）"]
+    FA --> FH["高 Faithfulness → 每个说法都能在菜单上找到依据"]
+    FA --> FL["低 Faithfulness → 你编了菜单上没有的东西（神户和牛、米其林）"]
 ```
 
 **关键区分**：
@@ -264,20 +256,24 @@ Recall 高 + Faithfulness 高 + Relevancy 低
 
 #### 一张图总结四条因果链
 
-```
-检索端                              生成端
-──────                              ──────
-Recall 低  ────────────────────→  Faithfulness 低
-  "鱼没捞够"                         "厨师补全编造"
-
-Precision 低 ──────────────────→  Answer Relevancy 低
-  "捞了一堆靴子"                     "被噪声带偏跑题"
-
-Recall ✓ Precision ✓ ─────X───→  Faithfulness 低
-  "材料齐全"                         "LLM 自己加戏 → 修 Prompt"
-
-Recall ✓ Faithfulness ✓ ──X──→  Answer Relevancy 低
-  "内容对也不编造"                    "方向偏了 → 修 Query"
+```mermaid
+flowchart LR
+    subgraph SIDE_RET["检索端"]
+        R1["Recall 低<br/>「鱼没捞够」"]
+        R2["Precision 低<br/>「捞了一堆靴子」"]
+        R3["Recall ✓ Precision ✓<br/>「材料齐全」"]
+        R4["Recall ✓ Faithfulness ✓<br/>「内容对也不编造」"]
+    end
+    subgraph SIDE_GEN["生成端"]
+        G1["Faithfulness 低<br/>「厨师补全编造」"]
+        G2["Answer Relevancy 低<br/>「被噪声带偏跑题」"]
+        G3["Faithfulness 低<br/>「LLM 自己加戏 → 修 Prompt」"]
+        G4["Answer Relevancy 低<br/>「方向偏了 → 修 Query」"]
+    end
+    R1 --> G1
+    R2 --> G2
+    R3 -->|"X：问题出在生成端"| G3
+    R4 -->|"X：问题出在生成端"| G4
 ```
 
 ---
@@ -345,26 +341,24 @@ A：Answer Relevancy（答案相关性）。因为大家本能地以为"答对�
 
 本章采用两种视角来讲解每个指标。你可以根据自己当前的需求选择阅读模式：
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  🏫 医生模式（学习视角） —— "这个指标是什么，为什么需要它"     │
-│                                                              │
-│  需（Need）    → 当前 RAG 有什么问题，需要这个指标来发现？      │
-│  根（Root）    → 这个问题为什么会出现？根因是什么？             │
-│  解（Solution）→ 这个指标如何计算？公式 + 手算一步步来          │
-│  损（Damage）  → 和其他变体相比什么时候选 A 什么时候选 B？       │
-│                                                              │
-│  适合：第一次学 / 复习公式 / 准备面试                          │
-├──────────────────────────────────────────────────────────────┤
-│  🏭 营销模式（执行视角） —— "解已确定，我该怎么落地执行？"      │
-│                                                              │
-│  解（Solution）已确定 → "我要算 Faithfulness，具体怎么做？"     │
-│  需（Need-Data）     → 需要哪些输入？从 RAG 管线哪个环节取？     │
-│  根（Root-Source）   → 每个数据从哪来？人工标注还是自动生成？    │
-│  损（Damage-Choice） → LLM 判还是规则判？全自动还是人工抽检？    │
-│                                                              │
-│  适合：搭建评估管线 / 写生产代码 / Agent 需要执行评估任务        │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph DOCMODE["🏫 医生模式（学习视角） —— 「这个指标是什么，为什么需要它」"]
+        D1["需（Need）→ 当前 RAG 有什么问题，需要这个指标来发现？"]
+        D2["根（Root）→ 这个问题为什么会出现？根因是什么？"]
+        D3["解（Solution）→ 这个指标如何计算？公式 + 手算一步步来"]
+        D4["损（Damage）→ 和其他变体相比什么时候选 A 什么时候选 B？"]
+        D5["适合：第一次学 / 复习公式 / 准备面试"]
+        D1 --> D2 --> D3 --> D4 --> D5
+    end
+    subgraph MKTMODE["🏭 营销模式（执行视角） —— 「解已确定，我该怎么落地执行？」"]
+        M1["解（Solution）已确定 → 「我要算 Faithfulness，具体怎么做？」"]
+        M2["需（Need-Data）→ 需要哪些输入？从 RAG 管线哪个环节取？"]
+        M3["根（Root-Source）→ 每个数据从哪来？人工标注还是自动生成？"]
+        M4["损（Damage-Choice）→ LLM 判还是规则判？全自动还是人工抽检？"]
+        M5["适合：搭建评估管线 / 写生产代码 / Agent 需要执行评估任务"]
+        M1 --> M2 --> M3 --> M4 --> M5
+    end
 ```
 
 **阅读建议**：
@@ -459,21 +453,20 @@ A：Answer Relevancy（答案相关性）。因为大家本能地以为"答对�
 
 RAG 评估的所有指标，归根结底只需要四个输入字段。理解它们的来源和去向，是生产落地最关键的一步。
 
-```
-输入字段                来源（从 RAG 管线的哪个环节取）           被哪些指标消费
-─────────────────────────────────────────────────────────────────────────────
-user_input              用户请求日志 / 前端输入                    Context Precision
-（用户原始问题）                                                   Answer Relevancy
-
-response                RAG 管线 → 生成步骤的输出                  Faithfulness
-（系统生成的答案）      (LangChain callback / Langfuse trace)      Answer Relevancy
-
-retrieved_contexts      RAG 管线 → 检索步骤的输出                  Context Recall
-（检索返回的上下文列表） (FAISS/向量库返回的文档列表)               Context Precision
-                                                                    Faithfulness
-
-reference (GT)          ⚠ 人工标注（10% 覆盖）                      Context Recall
-（标准答案）             或 LLM 自动生成（90% 覆盖，需人工抽样验证）
+```mermaid
+flowchart LR
+    S1["用户请求日志 / 前端输入"] --> F1["user_input<br/>（用户原始问题）"]
+    S2["RAG 管线 → 生成步骤的输出<br/>(LangChain callback / Langfuse trace)"] --> F2["response<br/>（系统生成的答案）"]
+    S3["RAG 管线 → 检索步骤的输出<br/>(FAISS/向量库返回的文档列表)"] --> F3["retrieved_contexts<br/>（检索返回的上下文列表）"]
+    S4["⚠ 人工标注（10% 覆盖）<br/>或 LLM 自动生成（90% 覆盖，需人工抽样验证）"] --> F4["reference (GT)<br/>（标准答案）"]
+    F1 --> M2["Context Precision"]
+    F1 --> M4["Answer Relevancy"]
+    F2 --> M1["Faithfulness"]
+    F2 --> M4
+    F3 --> M3["Context Recall"]
+    F3 --> M2
+    F3 --> M1
+    F4 --> M3
 ```
 
 > **关键认知**：四个指标中，**只有 Context Recall 需要标准答案（GT）**——这是唯一需要"提前准备正确答案"的指标。Faithfulness 只判断答案有没有依据（不判断对不对），Answer Relevancy 只判断是否切题（不判断对不对），Context Precision（上下文精确率） 只判断检索回来的东西是否相关。
@@ -618,23 +611,25 @@ RAGAS 的 `LLMContextRecall` 不要求标注文档 ID，只需要一条 **Ground
 
 **计算流程**：
 
-```
-GT 参考答案："RAG 是检索增强生成技术，将检索与 LLM 结合，主要作用是减少幻觉、提升答案准确性。"
-  │
-  ▼
-Step 1: LLM 将 GT 答案拆解为原子级句子
-  ├── S1: "RAG 是检索增强生成技术"
-  ├── S2: "RAG 将检索与 LLM 结合"
-  └── S3: "RAG 主要作用是减少幻觉、提升答案准确性"
-  │
-  ▼
-Step 2: 逐一判断每个句子是否能从 retrieved_contexts 中找到支撑
-  ├── S1 → ✅ 在上下文 1 中找到
-  ├── S2 → ✅ 在上下文 1 中找到
-  └── S3 → ✅ 在上下文 2 中找到
-  │
-  ▼
-Context Recall = 3/3 = 1.00
+```mermaid
+flowchart TD
+    GT["GT 参考答案：「RAG 是检索增强生成技术，将检索与 LLM 结合，主要作用是减少幻觉、提升答案准确性。」"]
+    STEP1["Step 1: LLM 将 GT 答案拆解为原子级句子"]
+    GT --> STEP1
+    STEP1 --> S1["S1: 「RAG 是检索增强生成技术」"]
+    STEP1 --> S2["S2: 「RAG 将检索与 LLM 结合」"]
+    STEP1 --> S3["S3: 「RAG 主要作用是减少幻觉、提升答案准确性」"]
+    STEP2["Step 2: 逐一判断每个句子是否能从 retrieved_contexts 中找到支撑"]
+    S1 --> STEP2
+    S2 --> STEP2
+    S3 --> STEP2
+    STEP2 --> R1["S1 → ✅ 在上下文 1 中找到"]
+    STEP2 --> R2["S2 → ✅ 在上下文 1 中找到"]
+    STEP2 --> R3["S3 → ✅ 在上下文 2 中找到"]
+    RES["Context Recall = 3/3 = 1.00"]
+    R1 --> RES
+    R2 --> RES
+    R3 --> RES
 ```
 
 $$
@@ -686,12 +681,15 @@ $$
 
 ##### 执行者分配
 
-```
-reference (GT) ──────────→ [LLM: 拆解为原子句子] ──→ S₁, S₂, ..., Sₙ
-                                                          │
-retrieved_contexts ───────────────────────────────────────┼──→ [LLM: 逐句判断是否有支撑] ──→ 结果[]
-                                                          │
-                                                          └──→ [纯计算: 计数/总数] ──→ 0~1
+```mermaid
+flowchart LR
+    GT["reference (GT)"] --> EX["LLM: 拆解为原子句子"]
+    EX --> SN["S₁, S₂, ..., Sₙ"]
+    SN --> JN["LLM: 逐句判断是否有支撑"]
+    CTX["retrieved_contexts"] --> JN
+    JN --> RS["结果[]"]
+    RS --> CN["纯计算: 计数/总数"]
+    CN --> OUT["0~1"]
 ```
 
 | 步骤                          | 谁执行                                         | 为什么                                           |
@@ -919,12 +917,13 @@ $$
 
 **执行者分配**：
 
-```
-user_input ────────────────┐
-                            ├──→ [LLM: 逐chunk判相关] ──→ rel(C_i) 标签列表
-retrieved_contexts ────────┘                                  │
-                                                              ▼
-                                                    [纯计算: Weighted公式] ──→ 0~1
+```mermaid
+flowchart LR
+    UI["user_input"] --> J["LLM: 逐chunk判相关"]
+    CTX["retrieved_contexts"] --> J
+    J --> LAB["rel(C_i) 标签列表"]
+    LAB --> CALC["纯计算: Weighted公式"]
+    CALC --> OUT["0~1"]
 ```
 
 | 步骤                        | 谁执行           | 为什么                   |
@@ -1176,35 +1175,23 @@ Faithfulness 是四个指标中计算最复杂、也最关键的。其核心流�
 
 #### 完整流水线
 
-```
-RAG 答案
-  │
-  ▼
-┌─────────────────────────────────────────┐
-│  Step 1: Claim 提取（Statement Extraction）│
-│  LLM 将答案拆解为原子级独立声明           │
-│  每条声明只包含一个可验证的事实            │
-└─────────────┬───────────────────────────┘
-              │
-              ▼
-  ├── Claim 1: "退款申请期限为 30 天"
-  ├── Claim 2: "退款 5-7 个工作日到账"
-  └── Claim 3: "退款不支持部分退款"
-              │
-              ▼
-┌──────────────────────────────────────────┐
-│  Step 2: NLI 验证（Entailment Check）      │
-│  每个 Claim 逐一与检索上下文比对            │
-│  判断：是否有支撑 / 矛盾 / 无信息           │
-└─────────────┬────────────────────────────┘
-              │
-              ▼
-  ├── Claim 1: ✅ 支撑（上下文第 2 段明确写了"30 天"）
-  ├── Claim 2: ✅ 支撑（上下文第 3 段写了"5-7 个工作日"）
-  └── Claim 3: ❌ 无支撑（上下文完全没有提到"部分退款"）
-              │
-              ▼
-      Faithfulness = 2/3 ≈ 0.67
+```mermaid
+flowchart TD
+    ANS["RAG 答案"] --> ST1["Step 1: Claim 提取（Statement Extraction）<br/>LLM 将答案拆解为原子级独立声明<br/>每条声明只包含一个可验证的事实"]
+    ST1 --> C1["Claim 1: 「退款申请期限为 30 天」"]
+    ST1 --> C2["Claim 2: 「退款 5-7 个工作日到账」"]
+    ST1 --> C3["Claim 3: 「退款不支持部分退款」"]
+    ST2["Step 2: NLI 验证（Entailment Check）<br/>每个 Claim 逐一与检索上下文比对<br/>判断：是否有支撑 / 矛盾 / 无信息"]
+    C1 --> ST2
+    C2 --> ST2
+    C3 --> ST2
+    ST2 --> V1["Claim 1: ✅ 支撑（上下文第 2 段明确写了「30 天」）"]
+    ST2 --> V2["Claim 2: ✅ 支撑（上下文第 3 段写了「5-7 个工作日」）"]
+    ST2 --> V3["Claim 3: ❌ 无支撑（上下文完全没有提到「部分退款」）"]
+    RES["Faithfulness = 2/3 ≈ 0.67"]
+    V1 --> RES
+    V2 --> RES
+    V3 --> RES
 ```
 
 $$
@@ -1242,13 +1229,13 @@ $$
 
 在 Faithfulness 计算中：`Premise = 检索上下文`，`Hypothesis = 答案中提取的 Claim`。只有 **Entailment** 算作 supported。
 
-```
-                 ┌─────────────────────────┐
-  Premise        │  NLI 模型 / LLM-Judge    │
-  (Context)  ──► │                           │ ──► Entailment    ✅
-  Hypothesis     │                           │ ──► Contradiction ❌
-  (Claim)    ──► │                           │ ──► Neutral       ❌
-                 └─────────────────────────┘
+```mermaid
+flowchart LR
+    P["Premise<br/>(Context)"] --> NLI["NLI 模型 / LLM-Judge"]
+    H["Hypothesis<br/>(Claim)"] --> NLI
+    NLI --> E["Entailment ✅"]
+    NLI --> C["Contradiction ❌"]
+    NLI --> N["Neutral ❌"]
 ```
 
 | 方案                                    | 优点                                  | 缺点                                 |
@@ -1354,12 +1341,15 @@ faithfulness = supported / total = 4/5 = 0.80
 
 ##### 执行者分配
 
-```
-response ──────────────→ [LLM: Claim提取] ──→ claims[]
-                                                    │
-retrieved_contexts ─────────────────────────────────┼──→ [LLM: 逐条NLI验证] ──→ 结果[]
-                                                    │
-                                                    └──→ [纯计算: 计数/总数] ──→ 0~1
+```mermaid
+flowchart LR
+    RSP["response"] --> EX["LLM: Claim提取"]
+    EX --> CL["claims[]"]
+    CL --> NV["LLM: 逐条NLI验证"]
+    CTX["retrieved_contexts"] --> NV
+    NV --> RS["结果[]"]
+    RS --> CN["纯计算: 计数/总数"]
+    CN --> OUT["0~1"]
 ```
 
 | 步骤                          | 谁执行           | 为什么                                                       | 注意事项                           |
@@ -1569,14 +1559,17 @@ lesson2 用了一个经典的 A/B/C 三场景实验来展示反向问题生成�
 
 ##### 执行者分配
 
-```
-user_input ──────────────┐
-                          ├──→ [LLM: 反向生成N个问题] ──→ q'₁, q'₂, q'₃
-response ────────────────┘                                    │
-                                                              ▼
-user_input ──→ [Embedding: E(q)] ────────────────────────────┼──→ [纯计算: cos均值] ──→ 0~1
-                                                              │
-q'₁, q'₂, q'₃ ──→ [Embedding: E(q'ᵢ)] ──────────────────────┘
+```mermaid
+flowchart LR
+    UI["user_input"] --> GEN["LLM: 反向生成N个问题"]
+    RSP["response"] --> GEN
+    GEN --> QS["q'₁, q'₂, q'₃"]
+    QS --> MEAN["纯计算: cos均值"]
+    UI --> EQ["Embedding: E(q)"]
+    EQ --> MEAN
+    QS --> EQI["Embedding: E(q'ᵢ)"]
+    EQI --> MEAN
+    MEAN --> OUT["0~1"]
 ```
 
 | 步骤                    | 谁执行                   | 为什么                                               |
@@ -1656,61 +1649,20 @@ def compute_answer_relevancy(original_q, reverse_qs, embedding_model):
 
 #### 2.6.1 计算依赖全景图：谁需要什么数据
 
-```
-                       ┌──────────────────┐
-                       │   user_input     │ ← 用户原始问题（RAG 请求日志）
-                       └──────┬───────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              │               │               │
-              ▼               ▼               ▼
-     Context Precision   Answer Relevancy    (无)
-     ("检索回来的跟问     ("答的跟问的有
-       题有关吗？")        关吗？")
-              │               │
-              │               │
-              └───────┬───────┘
-                      │  都不需要 GT！
-                      │
-                      ▼
-
-                       ┌──────────────────┐
-                       │    response      │ ← RAG 生成的答案（生成步骤输出）
-                       └──────┬───────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              │               │               │
-              ▼               ▼               ▼
-        Faithfulness    Answer Relevancy    (无)
-        ("答的有依据     ("答的切题吗？")
-         吗？")
-              │               │
-              │               │
-              └───────┬───────┘
-                      │
-                      ▼
-
-                       ┌──────────────────────┐
-                       │  retrieved_contexts  │ ← 检索结果列表（检索步骤输出）
-                       └──────┬───────────────┘
-                              │
-          ┌───────────────────┼───────────────────┐
-          │                   │                   │
-          ▼                   ▼                   ▼
-    Context Recall      Context Precision    Faithfulness
-    ("GT的内容检索        ("检索回来的跟问     ("Claim能从
-     到了吗？")           题有关吗？")         context找到吗？")
-          │
-          │ ← 唯一需要 GT 的指标！
-          ▼
-
-                       ┌──────────────────┐
-                       │ reference (GT)   │ ← 标准答案（人工标注 or LLM生成）
-                       └──────────────────┘
-                              │
-                              ▼
-                       Context Recall
-                       ("理想答案的内容检索到了多少？")
+```mermaid
+flowchart TD
+    subgraph NOGT["都不需要 GT！"]
+        UI["user_input<br/>用户原始问题（RAG 请求日志）"] --> CP1["Context Precision<br/>检索回来的跟问题有关吗？"]
+        UI --> AR1["Answer Relevancy<br/>答的跟问的有关吗？"]
+        UI --> N1["(无)"]
+        RSP["response<br/>RAG 生成的答案（生成步骤输出）"] --> FH1["Faithfulness<br/>答的有依据吗？"]
+        RSP --> AR2["Answer Relevancy<br/>答的切题吗？"]
+        RSP --> N2["(无)"]
+        CTX["retrieved_contexts<br/>检索结果列表（检索步骤输出）"] --> CR1["Context Recall<br/>GT的内容检索到了吗？"]
+        CTX --> CP2["Context Precision<br/>检索回来的跟问题有关吗？"]
+        CTX --> FH2["Faithfulness<br/>Claim能从context找到吗？"]
+    end
+    GT["reference (GT)<br/>标准答案（人工标注 or LLM生成）"] -->|"唯一需要 GT 的指标！"| CR2["Context Recall<br/>理想答案的内容检索到了多少？"]
 ```
 
 > **核心记忆**：四个指标中，**只有 Context Recall 需要标准答案（GT）**。Faithfulness 只看答案有没有依据（不需要 GT），Precision 只看检索结果相不相关（不需要 GT），Relevancy 只看答案切不切题（不需要 GT 也不看检索结果）。
@@ -1911,13 +1863,13 @@ A：
 >
 > 但**算出分数只是手段，不是目的**。真正的价值在于：
 >
-> ```
-> 第二层（你刚学完的）                第三层（正要开始的）
-> ─────────────────────       ──────────────────────────
->  "怎么算出 Faithfulness = 0.61"  →  "为什么只有 0.61？"
->                                   →  "是检索没给够材料，还是 LLM 自己瞎编？"
->                                   →  "怎么修？修完怎么验证真的变好了？"
->                                   →  "这套评估多久跑一次？怎么做成自动化的？"
+> ```mermaid
+> flowchart LR
+>     L2["第二层（你刚学完的）<br/>怎么算出 Faithfulness = 0.61"] --> L3["第三层（正要开始的）"]
+>     L3 --> Q1["为什么只有 0.61？"]
+>     L3 --> Q2["是检索没给够材料，还是 LLM 自己瞎编？"]
+>     L3 --> Q3["怎么修？修完怎么验证真的变好了？"]
+>     L3 --> Q4["这套评估多久跑一次？怎么做成自动化的？"]
 > ```
 >
 > **一句话**：第二层管 **"算分"**（compute），第三层管 **"用分"**（decide）。前者是称重，后者是开药方。下面进入第三层。
@@ -1930,16 +1882,16 @@ A：
 
 当拿到四个指标的分值后，如何快速定位问题？将 Precision 和 Recall 画在二维平面上：
 
-```
-                    Precision 高
-                         │
-         左上              │              右上
-    Recall 低 Precision 高 │ Recall 高 Precision 高
-    ──────────────────────┼─────────────────────
-         左下              │              右下
-    Recall 低 Precision 低 │ Recall 高 Precision 低
-                         │
-                    Precision 低
+```mermaid
+flowchart TD
+    subgraph PH["Precision 高"]
+        A["左上<br/>Recall 低 Precision 高"]
+        B["右上<br/>Recall 高 Precision 高"]
+    end
+    subgraph PL["Precision 低"]
+        C["左下<br/>Recall 低 Precision 低"]
+        D["右下<br/>Recall 高 Precision 低"]
+    end
 ```
 
 | 象限 | Precision | Recall | 状态              | 首要行动                                                                |
@@ -1955,31 +1907,28 @@ A：
 
 从低分指标出发，按优先级排查：
 
-```
-评估完成，按指标最低分排序
-  │
-  ├── Context Recall 最低（< 0.75）
-  │     ├── 增大 top_k（3 → 6 或更大）
-  │     ├── 缩小 chunk_size（1000 → 512）
-  │     ├── 增加 chunk_overlap（0 → 128）
-  │     └── 换更强的 Embedding 模型
-  │
-  ├── Context Precision 最低（< 0.65）
-  │     ├── 加 Reranker（如 BGE-Reranker）
-  │     ├── 提高相似度阈值（score_threshold: 0.7+）
-  │     ├── 减小 top_k（减少噪声引入）
-  │     └── 检查知识库文档质量
-  │
-  ├── Faithfulness 最低（< 0.75）
-  │     ├── 先查 Recall（Recall 低 → 先修 Recall）
-  │     ├── 强化 System Prompt（"只使用提供的上下文"）
-  │     ├── 降低 temperature（减少创造性编造）
-  │     └── 考虑换更强的 Judge LLM 重新评估
-  │
-  └── Answer Relevancy 最低（< 0.80）
-        ├── Query 重写（让用户问题更精确）
-        ├── HyDE（先生成假设答案再检索）
-        └── 优化 Response Prompt（要求首句直接回答）
+```mermaid
+flowchart TD
+    ROOT["评估完成，按指标最低分排序"]
+    ROOT --> D1{"Context Recall 最低<br/>（&lt; 0.75）"}
+    D1 --> A1["增大 top_k（3 → 6 或更大）"]
+    D1 --> A2["缩小 chunk_size（1000 → 512）"]
+    D1 --> A3["增加 chunk_overlap（0 → 128）"]
+    D1 --> A4["换更强的 Embedding 模型"]
+    ROOT --> D2{"Context Precision 最低<br/>（&lt; 0.65）"}
+    D2 --> B1["加 Reranker（如 BGE-Reranker）"]
+    D2 --> B2["提高相似度阈值（score_threshold: 0.7+）"]
+    D2 --> B3["减小 top_k（减少噪声引入）"]
+    D2 --> B4["检查知识库文档质量"]
+    ROOT --> D3{"Faithfulness 最低<br/>（&lt; 0.75）"}
+    D3 --> C1["先查 Recall（Recall 低 → 先修 Recall）"]
+    D3 --> C2["强化 System Prompt（「只使用提供的上下文」）"]
+    D3 --> C3["降低 temperature（减少创造性编造）"]
+    D3 --> C4["考虑换更强的 Judge LLM 重新评估"]
+    ROOT --> D4{"Answer Relevancy 最低<br/>（&lt; 0.80）"}
+    D4 --> E1["Query 重写（让用户问题更精确）"]
+    D4 --> E2["HyDE（先生成假设答案再检索）"]
+    D4 --> E3["优化 Response Prompt（要求首句直接回答）"]
 ```
 
 ### 3.3 优化策略速查表
@@ -2117,21 +2066,20 @@ lesson2 同时演示了两种测试集生成方案并做了对比：
 
 评估不是一次性任务，是持续工程。
 
-```
-Layer 1：实时监控
-  ├── 每 N 次查询抽样评估
-  ├── 检测指标异常漂移（如 Faithfulness 突然下降 10%）
-  └── 触发告警 → 通知 on-call
-
-Layer 2：定期评估
-  ├── 每周/每日对固定评估集跑全量指标
-  ├── 生成趋势报告（Recall 从 0.82 → 0.78 → 0.75 持续下降）
-  └── 标记退化版本
-
-Layer 3：发布门禁
-  ├── 每次上线前对评估集跑评估
-  ├── 低于阈值 → 阻止发布
-  └── 全部通过 → 自动放行
+```mermaid
+flowchart TD
+    L1["Layer 1：实时监控"]
+    L1 --> L1A["每 N 次查询抽样评估"]
+    L1 --> L1B["检测指标异常漂移（如 Faithfulness 突然下降 10%）"]
+    L1 --> L1C["触发告警 → 通知 on-call"]
+    L2["Layer 2：定期评估"]
+    L2 --> L2A["每周/每日对固定评估集跑全量指标"]
+    L2 --> L2B["生成趋势报告（Recall 从 0.82 → 0.78 → 0.75 持续下降）"]
+    L2 --> L2C["标记退化版本"]
+    L3["Layer 3：发布门禁"]
+    L3 --> L3A["每次上线前对评估集跑评估"]
+    L3 --> L3B["低于阈值 → 阻止发布"]
+    L3 --> L3C["全部通过 → 自动放行"]
 ```
 
 #### CI/CD 集成示例
@@ -2303,20 +2251,14 @@ Layer 3（发布门禁）    → CI 中调用 RAGAS evaluate()，低于阈值阻
 
 ### 3.8 优化优先级总结
 
-```
-┌──────────────────────────────────────────────┐
-│  RAG 评估优化黄金顺序                          │
-│                                              │
-│  1️⃣ Recall     没材料什么都做不了              │
-│       ↓                                      │
-│  2️⃣ Faithfulness  材料足了再防幻觉              │
-│       ↓                                      │
-│  3️⃣ Precision  噪声少了才值得精排               │
-│       ↓                                      │
-│  4️⃣ Relevancy  前三者稳了再追求切题              │
-│                                              │
-│  违反这个顺序 = 在沙子地基上盖房子               │
-└──────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    T["RAG 评估优化黄金顺序"]
+    T --> S1["1️⃣ Recall　没材料什么都做不了"]
+    S1 --> S2["2️⃣ Faithfulness　材料足了再防幻觉"]
+    S2 --> S3["3️⃣ Precision　噪声少了才值得精排"]
+    S3 --> S4["4️⃣ Relevancy　前三者稳了再追求切题"]
+    S4 --> WARN["违反这个顺序 = 在沙子地基上盖房子"]
 ```
 
 **具体步骤**：
